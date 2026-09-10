@@ -1,0 +1,652 @@
+{
+  "generatedAt": "2026-09-10T11:00:00Z",
+  "note": "Curated design fixture. Real titles from ShaxP/shax; rest synthesized.",
+  "rows": [
+    {
+      "id": "24555446001",
+      "unread": true,
+      "reason": "review_requested",
+      "updatedAt": "2026-09-10T10:56:00Z",
+      "subject": {
+        "title": "Add SocketServer reconnect backoff and idle timeout",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "quickshell/quickshell",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/583231?v=4"
+      },
+      "enriched": {
+        "number": 1842,
+        "state": "open",
+        "isDraft": false,
+        "actor": "octocat",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/583231?v=4",
+        "checks": "pending"
+      }
+    },
+    {
+      "id": "24555446002",
+      "unread": true,
+      "reason": "mention",
+      "updatedAt": "2026-09-10T10:38:00Z",
+      "subject": {
+        "title": "Bar widget plugins should be able to declare a preferred section",
+        "type": "Issue"
+      },
+      "repo": {
+        "fullName": "basecamp/omarchy",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/9919?v=4"
+      },
+      "enriched": {
+        "number": 903,
+        "state": "open",
+        "isDraft": false,
+        "actor": "github",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/9919?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446003",
+      "unread": true,
+      "reason": "ci_activity",
+      "updatedAt": "2026-09-10T10:19:00Z",
+      "subject": {
+        "title": "CI failed on main",
+        "type": "CheckSuite"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": null,
+        "state": null,
+        "isDraft": false,
+        "actor": null,
+        "actorAvatar": null,
+        "checks": "failing"
+      }
+    },
+    {
+      "id": "24555446004",
+      "unread": true,
+      "reason": "author",
+      "updatedAt": "2026-09-10T09:00:00Z",
+      "subject": {
+        "title": "fix: syntax highlighting follows the Dark/Light/System toggle",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 61,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446005",
+      "unread": true,
+      "reason": "assign",
+      "updatedAt": "2026-09-10T08:00:00Z",
+      "subject": {
+        "title": "Notifications inbox: decide enrichment strategy",
+        "type": "Issue"
+      },
+      "repo": {
+        "fullName": "ShaxP/omaghy",
+        "private": true,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 7,
+        "state": "open",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446006",
+      "unread": true,
+      "reason": "comment",
+      "updatedAt": "2026-09-10T06:00:00Z",
+      "subject": {
+        "title": "Stabilize `let_chains` in the 2024 edition",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "rust-lang/rust",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/5430905?v=4"
+      },
+      "enriched": null
+    },
+    {
+      "id": "24555446007",
+      "unread": true,
+      "reason": "team_mention",
+      "updatedAt": "2026-09-10T05:00:00Z",
+      "subject": {
+        "title": "RFC: unifying the plugin manifest across shell surfaces",
+        "type": "Discussion"
+      },
+      "repo": {
+        "fullName": "some-very-long-organization-name/an-equally-long-repository-name",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/583231?v=4"
+      },
+      "enriched": null
+    },
+    {
+      "id": "24555446008",
+      "unread": true,
+      "reason": "subscribed",
+      "updatedAt": "2026-09-10T03:00:00Z",
+      "subject": {
+        "title": "Refactor the Wayland layer-shell surface lifecycle so that anchors, exclusive zones, and keyboard focus are reconciled in a single pass",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "quickshell/quickshell",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/583231?v=4"
+      },
+      "enriched": {
+        "number": 1799,
+        "state": "open",
+        "isDraft": true,
+        "actor": "octocat",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/583231?v=4",
+        "checks": "pending"
+      }
+    },
+    {
+      "id": "24555446009",
+      "unread": true,
+      "reason": "security_alert",
+      "updatedAt": "2026-09-10T00:00:00Z",
+      "subject": {
+        "title": "Moderate severity vulnerability in openssl 0.10.66",
+        "type": "RepositoryVulnerabilityAlert"
+      },
+      "repo": {
+        "fullName": "ShaxP/omaghy",
+        "private": true,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": null,
+        "state": "open",
+        "isDraft": false,
+        "actor": null,
+        "actorAvatar": null,
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446010",
+      "unread": false,
+      "reason": "subscribed",
+      "updatedAt": "2026-09-09T11:00:00Z",
+      "subject": {
+        "title": "Rust 1.94.0",
+        "type": "Release"
+      },
+      "repo": {
+        "fullName": "rust-lang/rust",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/5430905?v=4"
+      },
+      "enriched": {
+        "number": null,
+        "state": null,
+        "isDraft": false,
+        "actor": "rust",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/5430905?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446011",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-09T07:00:00Z",
+      "subject": {
+        "title": "M7 slice 1: light theme + Dark/Light/System toggle",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 60,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446012",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-08T11:00:00Z",
+      "subject": {
+        "title": "fix: tighter markdown spacing in chat bubbles",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 59,
+        "state": "closed",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "failing"
+      }
+    },
+    {
+      "id": "24555446013",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-08T05:00:00Z",
+      "subject": {
+        "title": "Ollama per-model tool + vision probing (closes M6)",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 58,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446014",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-07T11:00:00Z",
+      "subject": {
+        "title": "fix: block-focus works while the assistant panel is open",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 57,
+        "state": "open",
+        "isDraft": true,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "pending"
+      }
+    },
+    {
+      "id": "24555446015",
+      "unread": false,
+      "reason": "state_change",
+      "updatedAt": "2026-09-07T02:00:00Z",
+      "subject": {
+        "title": "Theme switcher should preview before applying",
+        "type": "Issue"
+      },
+      "repo": {
+        "fullName": "basecamp/omarchy",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/9919?v=4"
+      },
+      "enriched": {
+        "number": 871,
+        "state": "closed",
+        "isDraft": false,
+        "actor": "github",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/9919?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446016",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-06T11:00:00Z",
+      "subject": {
+        "title": "spec: notifications inbox domain model",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/omaghy",
+        "private": true,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 3,
+        "state": "open",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446017",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-05T11:00:00Z",
+      "subject": {
+        "title": "Tool integration: run_command via safety gate (M6 loop close)",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": null
+    },
+    {
+      "id": "24555446018",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-04T11:00:00Z",
+      "subject": {
+        "title": "M6 slice 4: assistant chat overlay + explain-on-error + capability gating",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 55,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446019",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-02T11:00:00Z",
+      "subject": {
+        "title": "M6 slice 3: Ollama provider (local, capability-probed)",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 54,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446020",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-09-01T11:00:00Z",
+      "subject": {
+        "title": "M6 slice 2b: Claude subscription lane (local CLI subprocess)",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 53,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446021",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-08-30T11:00:00Z",
+      "subject": {
+        "title": "M6 slice 2a: Claude provider \u2014 API key lane (Rust proxy)",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 52,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446022",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-08-28T11:00:00Z",
+      "subject": {
+        "title": "M6 slice 1: safety gate + AssistantProvider interface",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 51,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446023",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-08-25T11:00:00Z",
+      "subject": {
+        "title": "docs: pluggable AssistantProvider model for M6",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 50,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446024",
+      "unread": false,
+      "reason": "comment",
+      "updatedAt": "2026-08-20T11:00:00Z",
+      "subject": {
+        "title": "Handle wl-paste MIME negotiation on macOS bridge",
+        "type": "Commit"
+      },
+      "repo": {
+        "fullName": "ShaxP/clipboard-sharing-mac-omarchy",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": null,
+        "state": null,
+        "isDraft": false,
+        "actor": "octocat",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/583231?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446025",
+      "unread": false,
+      "reason": "manual",
+      "updatedAt": "2026-08-11T11:00:00Z",
+      "subject": {
+        "title": "Tracking: plugin manifest schemaVersion 2",
+        "type": "Issue"
+      },
+      "repo": {
+        "fullName": "some-very-long-organization-name/an-equally-long-repository-name",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/583231?v=4"
+      },
+      "enriched": {
+        "number": 412,
+        "state": "open",
+        "isDraft": false,
+        "actor": "octocat",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/583231?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446026",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-07-10T11:00:00Z",
+      "subject": {
+        "title": "M5 slice 3: ls widget (closes M5)",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 49,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446027",
+      "unread": false,
+      "reason": "author",
+      "updatedAt": "2026-05-15T11:00:00Z",
+      "subject": {
+        "title": "M5 slice 2 follow-up: silent-reads model + sticky-bottom live widget",
+        "type": "PullRequest"
+      },
+      "repo": {
+        "fullName": "ShaxP/shax",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4"
+      },
+      "enriched": {
+        "number": 48,
+        "state": "merged",
+        "isDraft": false,
+        "actor": "shaxp",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/19811678?v=4",
+        "checks": "passing"
+      }
+    },
+    {
+      "id": "24555446028",
+      "unread": false,
+      "reason": "invitation",
+      "updatedAt": "2025-08-06T11:00:00Z",
+      "subject": {
+        "title": "You were invited to collaborate",
+        "type": "Issue"
+      },
+      "repo": {
+        "fullName": "basecamp/omarchy",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/9919?v=4"
+      },
+      "enriched": {
+        "number": null,
+        "state": null,
+        "isDraft": false,
+        "actor": "github",
+        "actorAvatar": "https://avatars.githubusercontent.com/u/9919?v=4",
+        "checks": null
+      }
+    },
+    {
+      "id": "24555446029",
+      "unread": true,
+      "reason": "comment",
+      "updatedAt": "2026-09-10T10:51:00Z",
+      "subject": {
+        "title": "Short one",
+        "type": "Issue"
+      },
+      "repo": {
+        "fullName": "some-very-long-organization-name/an-equally-long-repository-name",
+        "private": false,
+        "ownerAvatar": "https://avatars.githubusercontent.com/u/583231?v=4"
+      },
+      "enriched": {
+        "number": 9001,
+        "state": "open",
+        "isDraft": false,
+        "actor": null,
+        "actorAvatar": null,
+        "checks": null
+      }
+    }
+  ]
+}
