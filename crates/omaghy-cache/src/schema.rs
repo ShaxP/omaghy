@@ -20,7 +20,7 @@ use std::path::Path;
 /// `omaghy-model` type changes shape. Bodies are serialized model types
 /// (`spec/20-store.md` §3), so the model is part of the schema whether or not
 /// the SQL moved.
-pub const SCHEMA_VERSION: i64 = 1;
+pub const SCHEMA_VERSION: i64 = 2;
 
 /// The tables from `spec/20-store.md` §3, with three corrections that §3 did
 /// not survive contact with — see the crate docs and the spec's own §3 notes:
@@ -32,6 +32,12 @@ pub const SCHEMA_VERSION: i64 = 1;
 ///   per-token, so a shared row makes one account's budget govern another's.
 /// * `notifications` has an index on `(viewer, updated_at)`. Every read of
 ///   that table is "this viewer's inbox, newest first".
+///
+/// Version 2 adds `list_meta.total`: how many rows *match*, as opposed to how
+/// many we hold. A dashboard section renders a count and fetches at most
+/// `limit` ids, so counting `list_items` reported the limit rather than the
+/// truth. There is no migration — this is a cache, and a version bump rebuilds
+/// it (`spec/20-store.md` §3.2).
 const DDL: &str = "
 CREATE TABLE IF NOT EXISTS entities (
   node_id       TEXT    NOT NULL,
@@ -58,6 +64,7 @@ CREATE TABLE IF NOT EXISTS list_meta (
   etag          TEXT,
   last_modified TEXT,
   cursor        TEXT,
+  total         INTEGER,
   complete      INTEGER NOT NULL,
   fetched_at    INTEGER NOT NULL,
   PRIMARY KEY (list_key, viewer)

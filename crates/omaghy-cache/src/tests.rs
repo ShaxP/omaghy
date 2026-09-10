@@ -485,6 +485,7 @@ fn both_validators_are_stored_beside_the_data() {
     let meta = ListMeta {
         validators: v.clone(),
         cursor: Some("Y3Vyc29yOjE=".into()),
+        total: Some(42),
         complete: false,
         fetched_at: NOW,
     };
@@ -503,6 +504,7 @@ fn a_304_refreshes_the_clock_without_rewriting_the_list() {
             &ListMeta {
                 validators: Validators::etag("v1"),
                 cursor: None,
+                total: None,
                 complete: true,
                 fetched_at: NOW - Duration::hours(1),
             },
@@ -807,6 +809,76 @@ async fn the_dashboard_is_only_as_fresh_as_its_stalest_section() {
     let got = s.dashboard(&cfg).await.unwrap();
     assert!(!got.stale);
     assert_eq!(got.value.sections[1].count, 1);
+}
+
+/// A section's number is how many **match**, not how many we hold.
+///
+/// The two differ exactly when it matters: a review queue longer than the
+/// fetch limit. Counting stored ids reported the limit, so forty PRs awaiting
+/// review read as "10" — a wrong number, confidently rendered, on the surface
+/// whose entire content is that number.
+#[tokio::test]
+async fn a_section_counts_what_matches_not_what_was_fetched() {
+    let cfg = DashboardConfig {
+        sections: vec![DashboardSection {
+            title: "Needs my review".into(),
+            query: "is:open is:pr review-requested:@me".into(),
+            limit: 10,
+        }],
+    };
+    let s = store("ShaxP");
+    let key = dashboard_list_key(&cfg.sections[0].query);
+
+    s.with_cache(|c| {
+        c.put_list(
+            &key,
+            &[],
+            &ListMeta {
+                validators: Validators::default(),
+                cursor: None,
+                total: Some(40),
+                complete: true,
+                fetched_at: NOW,
+            },
+        )
+    })
+    .unwrap();
+
+    let got = s.dashboard(&cfg).await.unwrap();
+    assert_eq!(
+        got.value.sections[0].count, 40,
+        "the count is the search total, and no ids were stored at all"
+    );
+    assert!(!got.stale);
+}
+
+/// Without a stored total, the ids are the whole answer.
+///
+/// This is the list that was fetched complete — the shape every caller used
+/// before `total` existed, and the reason the field is `Option` rather than a
+/// bare number that would read as zero.
+#[tokio::test]
+async fn a_list_with_no_total_still_counts_its_rows() {
+    let cfg = DashboardConfig {
+        sections: vec![DashboardSection {
+            title: "Assigned to me".into(),
+            query: "is:open assignee:@me".into(),
+            limit: 10,
+        }],
+    };
+    let s = store("ShaxP");
+
+    s.with_cache(|c| {
+        c.put_list(
+            &dashboard_list_key(&cfg.sections[0].query),
+            &[NodeId("I_1".into()), NodeId("I_2".into())],
+            &ListMeta::complete_at(NOW),
+        )
+    })
+    .unwrap();
+
+    let got = s.dashboard(&cfg).await.unwrap();
+    assert_eq!(got.value.sections[0].count, 2);
 }
 
 #[tokio::test]

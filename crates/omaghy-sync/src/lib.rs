@@ -12,9 +12,9 @@
 
 use async_trait::async_trait;
 use omaghy_api::{Conditional, GitHubClient, NotificationFilter, Notifications};
-use omaghy_cache::{Cache, ListMeta, Remote, SqliteStore};
+use omaghy_cache::{Cache, ListMeta, Remote, SqliteStore, dashboard_list_key};
 use omaghy_model::{NotificationId, Result, Validators};
-use omaghy_store::{NotificationQuery, RefreshTarget, Store};
+use omaghy_store::{DashboardConfig, NotificationQuery, RefreshTarget, Store};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex, Weak},
@@ -32,12 +32,18 @@ struct Job {
     client: Arc<GitHubClient>,
     store: Arc<SqliteStore>,
     running: Arc<Mutex<HashMap<RefreshTarget, JoinHandle<()>>>>,
+    /// The sections to count. `RefreshTarget::Dashboard` names no queries —
+    /// it cannot, since it is a key that has to hash and compare — so the
+    /// syncer is told once at startup, which is also when config is read
+    /// (`spec/40-config.md` §1).
+    dashboard: Arc<DashboardConfig>,
 }
 
 pub struct Syncer {
     client: Arc<GitHubClient>,
     store: Mutex<Weak<SqliteStore>>,
     running: Arc<Mutex<HashMap<RefreshTarget, JoinHandle<()>>>>,
+    dashboard: Arc<DashboardConfig>,
 }
 
 impl std::fmt::Debug for Syncer {
@@ -51,10 +57,16 @@ impl std::fmt::Debug for Syncer {
 
 impl Syncer {
     pub fn new(client: Arc<GitHubClient>) -> Arc<Self> {
+        Self::with_dashboard(client, DashboardConfig::default())
+    }
+
+    /// The syncer, told which dashboard sections to count.
+    pub fn with_dashboard(client: Arc<GitHubClient>, dashboard: DashboardConfig) -> Arc<Self> {
         Arc::new(Self {
             client,
             store: Mutex::new(Weak::new()),
             running: Arc::new(Mutex::new(HashMap::new())),
+            dashboard: Arc::new(dashboard),
         })
     }
 
@@ -72,6 +84,7 @@ impl Syncer {
             client: self.client.clone(),
             store: self.store.lock().expect("not poisoned").upgrade()?,
             running: self.running.clone(),
+            dashboard: self.dashboard.clone(),
         })
     }
 }
@@ -126,6 +139,9 @@ impl Job {
             &ListMeta {
                 validators,
                 cursor,
+                // The inbox's rows live in the notifications table, so its
+                // count is a query against that and never a stored total.
+                total: None,
                 complete: true,
                 fetched_at: now,
             },
@@ -144,10 +160,59 @@ impl Job {
             &ListMeta {
                 validators,
                 cursor: None,
+                total: None,
                 complete,
                 fetched_at: now,
             },
         )
+    }
+
+    /// Count every dashboard section in one request.
+    ///
+    /// Sections are counts, not rows, until M2 — so this stores a `total` and
+    /// no ids. The count is what the surface renders, and counting stored ids
+    /// would report the fetch limit instead of the queue.
+    ///
+    /// A section GitHub could not answer keeps whatever count it had rather
+    /// than dropping to zero. Zero is a claim — "nothing needs your review" —
+    /// and it is the wrong one to make out of a failure.
+    async fn sync_dashboard(&self) -> Result<()> {
+        let queries: Vec<String> = self
+            .dashboard
+            .sections
+            .iter()
+            .map(|s| s.query.clone())
+            .collect();
+        if queries.is_empty() {
+            return Ok(());
+        }
+
+        let counts = self.client.search().counts(&queries).await?;
+        let now = self.store.now();
+
+        self.store.with_cache(|c| {
+            for (query, count) in queries.iter().zip(&counts) {
+                match count {
+                    Ok(total) => {
+                        c.put_list(
+                            &dashboard_list_key(query),
+                            &[],
+                            &ListMeta {
+                                validators: Validators::default(),
+                                cursor: None,
+                                total: Some(*total),
+                                complete: true,
+                                fetched_at: now,
+                            },
+                        )?;
+                    }
+                    Err(message) => {
+                        tracing::warn!(%query, %message, "a dashboard section could not be counted");
+                    }
+                }
+            }
+            Ok(())
+        })
     }
 
     /// Fill in what the REST payload left out.
@@ -177,8 +242,11 @@ impl Job {
         let result = match &target {
             RefreshTarget::Notifications => self.sync_notifications().await,
             RefreshTarget::NotificationDetails => self.enrich().await,
-            // Dashboard sections and the rest arrive with the surfaces that
-            // render rows for them, in M2.
+            RefreshTarget::Dashboard => self.sync_dashboard().await,
+            // Pull request and issue lists arrive with the surfaces that
+            // render rows for them, in M2. Reporting success for a target
+            // nothing fetches is what made the dashboard claim a refresh it
+            // never performed, so this arm is now only the unbuilt surfaces.
             _ => Ok(()),
         };
         self.running.lock().expect("not poisoned").remove(&target);

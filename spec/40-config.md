@@ -75,6 +75,16 @@ sections = [
   { title = "Recently mentioned", query = "is:open mentions:@me",              limit = 10 },
 ]
 
+# A section's number is how many **match**, not how many are fetched: `limit`
+# caps the rows a section will hold once M2 renders them, and never the count.
+#
+# **A bad query does not fail.** Verified against the live API: search answers
+# a nonexistent repository with 0, an invalid qualifier value by ignoring the
+# qualifier, and an unbalanced quote with a number in the tens of thousands —
+# all HTTP 200, no error. So a typo here produces a confident wrong number and
+# nothing downstream can detect it. This is the one setting where "unknown
+# keys warn" (§1) buys nothing, because the value is not ours to validate.
+
 [refresh]
 # Seconds. Floors apply: notifications never polls faster than GitHub's
 # X-Poll-Interval, whatever this says (20-store.md §6).

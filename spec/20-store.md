@@ -114,8 +114,8 @@ CREATE TABLE list_items (
 );
 CREATE TABLE list_meta (
   list_key TEXT NOT NULL, viewer TEXT NOT NULL,
-  etag TEXT, last_modified TEXT, cursor TEXT, complete INTEGER NOT NULL,
-  fetched_at INTEGER NOT NULL,
+  etag TEXT, last_modified TEXT, cursor TEXT, total INTEGER,
+  complete INTEGER NOT NULL, fetched_at INTEGER NOT NULL,
   PRIMARY KEY (list_key, viewer)
 );
 
@@ -139,7 +139,9 @@ happens once, at the `omaghy-api` boundary, not on every cache read. That makes
 the model part of the schema: a model change bumps `user_version` (§3.2) even
 when the SQL is untouched.
 
-Three columns above were added in W1.2, where the schema was first compiled:
+Four columns above were not in the original DDL. Three were added in W1.2,
+where the schema was first compiled, and the fourth when the dashboard was
+first given real numbers:
 
 - **`last_modified` on `entities` and `list_meta`.** §4 requires both
   validators stored beside the data; the original DDL had only `etag`, leaving
@@ -149,6 +151,12 @@ Three columns above were added in W1.2, where the schema was first compiled:
   A single-keyed `kv` lets one account's exhausted budget throttle another's.
 - **An index on `(viewer, updated_at)`**, because every read of that table is
   "this viewer's inbox, newest first".
+- **`total` on `list_meta`** — how many rows *match*, as against how many we
+  hold. A dashboard section fetches at most `limit` ids and renders a count, so
+  counting `list_items` reported the limit: a review queue of forty read as
+  "10". The two numbers are different questions and the schema now has room for
+  both. `NULL` means the fetch reported no total, and the stored ids are the
+  whole answer — which is right for any list fetched complete.
 
 `unread`, `updated_at` and `enrichment` are denormalized out of the
 notification body so the inbox can be filtered and sorted, and so "which rows
