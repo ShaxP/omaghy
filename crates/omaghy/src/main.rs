@@ -7,7 +7,7 @@ use clap::Parser;
 use omaghy_api::viewer_login;
 use omaghy_cache::SqliteStore;
 use omaghy_store::{FakeStore, Store, Viewer};
-use omaghy_sync::Syncer;
+use omaghy_sync::{PollConfig, Syncer};
 use omaghy_tui::{App, Route, terminal};
 use std::sync::Arc;
 use time::OffsetDateTime;
@@ -115,6 +115,13 @@ async fn real_store() -> Result<Arc<dyn Store>> {
     let store =
         Arc::new(open_cache(&cache_path()?, Viewer::new(login))?.with_remote(syncer.clone()));
     syncer.attach(&store);
+
+    // Nothing refreshed on its own before this: omaghy fetched on entering a
+    // surface and on `r`, so an inbox left open showed the morning's rows all
+    // afternoon. The handles are dropped deliberately — the tasks hold a
+    // `Weak` to the store and end when the TUI drops it.
+    syncer.start_polling(PollConfig::default());
+
     Ok(store)
 }
 

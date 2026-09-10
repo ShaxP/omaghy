@@ -10,6 +10,10 @@
 //! which is a cycle. It is broken with a [`Weak`], set by [`Syncer::attach`]
 //! once both exist.
 
+pub mod poll;
+
+pub use poll::PollConfig;
+
 use async_trait::async_trait;
 use omaghy_api::{Conditional, GitHubClient, NotificationFilter, Notifications};
 use omaghy_cache::{Cache, ListMeta, Remote, SqliteStore, dashboard_list_key};
@@ -37,6 +41,7 @@ struct Job {
     /// syncer is told once at startup, which is also when config is read
     /// (`spec/40-config.md` §1).
     dashboard: Arc<DashboardConfig>,
+    failures: Arc<Mutex<HashMap<RefreshTarget, u32>>>,
 }
 
 pub struct Syncer {
@@ -44,6 +49,10 @@ pub struct Syncer {
     store: Mutex<Weak<SqliteStore>>,
     running: Arc<Mutex<HashMap<RefreshTarget, JoinHandle<()>>>>,
     dashboard: Arc<DashboardConfig>,
+    /// Consecutive failures per target, for the poll loop's back-off. Reset by
+    /// the first success, so a network that comes back is noticed at the
+    /// configured interval rather than at the backed-off one.
+    failures: Arc<Mutex<HashMap<RefreshTarget, u32>>>,
 }
 
 impl std::fmt::Debug for Syncer {
@@ -67,6 +76,7 @@ impl Syncer {
             store: Mutex::new(Weak::new()),
             running: Arc::new(Mutex::new(HashMap::new())),
             dashboard: Arc::new(dashboard),
+            failures: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -79,12 +89,29 @@ impl Syncer {
         *self.store.lock().expect("not poisoned") = Arc::downgrade(store);
     }
 
+    /// The store, if it is still alive. `None` once the TUI has dropped it,
+    /// which is how a poll task learns to stop.
+    pub(crate) fn store(&self) -> Option<Arc<SqliteStore>> {
+        self.store.lock().expect("not poisoned").upgrade()
+    }
+
+    /// Consecutive failures for a target. Zero when it last succeeded.
+    pub(crate) fn failures(&self, target: &RefreshTarget) -> u32 {
+        self.failures
+            .lock()
+            .expect("not poisoned")
+            .get(target)
+            .copied()
+            .unwrap_or(0)
+    }
+
     fn job(&self) -> Option<Job> {
         Some(Job {
             client: self.client.clone(),
             store: self.store.lock().expect("not poisoned").upgrade()?,
             running: self.running.clone(),
             dashboard: self.dashboard.clone(),
+            failures: self.failures.clone(),
         })
     }
 }
@@ -251,6 +278,18 @@ impl Job {
         };
         self.running.lock().expect("not poisoned").remove(&target);
         let listed_ok = result.is_ok() && target == RefreshTarget::Notifications;
+        {
+            let mut failures = self.failures.lock().expect("not poisoned");
+            match &result {
+                Ok(()) => {
+                    failures.remove(&target);
+                }
+                // Saturating rather than wrapping: a counter that rolled over
+                // would reset the back-off to nothing after four billion
+                // failures, which is a silly way to start hammering.
+                Err(_) => *failures.entry(target.clone()).or_insert(0) += 1,
+            }
+        }
         match result {
             Ok(()) => self.store.refresh_finished(target),
             Err(e) => self.store.refresh_failed(target, e),
@@ -293,5 +332,76 @@ impl Remote for Syncer {
     /// read on the next fetch.
     async fn mark_unread(&self, _ids: &[NotificationId]) -> Result<()> {
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use omaghy_api::cassette::StubTransport;
+    use omaghy_api::{GitHubClient, HttpResponse, Token, TransportError};
+    use omaghy_store::Viewer;
+
+    fn syncer_over(transport: Arc<dyn omaghy_api::Transport>) -> (Arc<Syncer>, Arc<SqliteStore>) {
+        let client = Arc::new(GitHubClient::new(
+            Token::new("gho_notarealtoken").expect("non-empty"),
+            transport,
+        ));
+        let syncer = Syncer::new(client);
+        let store = Arc::new(
+            SqliteStore::in_memory(Viewer::new("ShaxP"))
+                .expect("in-memory cache")
+                .with_remote(syncer.clone()),
+        );
+        syncer.attach(&store);
+        (syncer, store)
+    }
+
+    /// Wait for the spawned refresh to finish, without sleeping a fixed amount
+    /// and hoping. Fails loudly rather than hanging.
+    async fn settle(syncer: &Arc<Syncer>) {
+        for _ in 0..200 {
+            if syncer.running.lock().expect("not poisoned").is_empty() {
+                return;
+            }
+            tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+        }
+        panic!("a refresh never finished");
+    }
+
+    /// The back-off in `poll` is only real if this counter moves. Asserting
+    /// the arithmetic alone would pass with the wiring removed.
+    #[tokio::test]
+    async fn a_failed_refresh_is_counted_and_a_good_one_clears_it() {
+        let offline = Arc::new(StubTransport::failing(TransportError::Unreachable(
+            "no route to host".into(),
+        )));
+        let (syncer, store) = syncer_over(offline);
+
+        assert_eq!(syncer.failures(&RefreshTarget::Notifications), 0);
+
+        store.refresh(RefreshTarget::Notifications);
+        settle(&syncer).await;
+        assert_eq!(
+            syncer.failures(&RefreshTarget::Notifications),
+            1,
+            "an offline fetch must raise the back-off"
+        );
+
+        store.refresh(RefreshTarget::Notifications);
+        settle(&syncer).await;
+        assert_eq!(syncer.failures(&RefreshTarget::Notifications), 2);
+
+        // Now let one succeed. A 304 is the cheapest real success the inbox
+        // has — nothing is written and only the freshness stamp moves — and it
+        // needs no recorded request path to match against.
+        let (syncer, store) = syncer_over(Arc::new(StubTransport::always(HttpResponse::new(304))));
+        store.refresh(RefreshTarget::Notifications);
+        settle(&syncer).await;
+        assert_eq!(
+            syncer.failures(&RefreshTarget::Notifications),
+            0,
+            "a network that comes back polls at the configured rate, not the backed-off one"
+        );
     }
 }

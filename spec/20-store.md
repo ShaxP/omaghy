@@ -306,6 +306,35 @@ Only 5xx and an unreachable host are retried within one call.
 Coalesce refreshes: the same target requested twice while in flight is one
 request with two waiters. Cancel refreshes for surfaces the user has left.
 
+### 6.1 The poll loop
+
+**Added when it was built.** Everything above describes what happens when a
+refresh is *asked for*. Until the loop existed nothing asked: omaghy fetched on
+entering a surface and on `r`, so an inbox left open all afternoon showed the
+morning's rows and said nothing about having stopped looking.
+
+One task per polled target — notifications and the dashboard — in
+`omaghy-sync`, which is the crate whose job this is. Each sleeps, schedules
+through `Store::refresh`, and sleeps again. Three properties are load-bearing:
+
+- **A tick schedules; it does not fetch.** Going through `Store::refresh` means
+  a tick landing while a refresh is in flight coalesces into it rather than
+  stacking a second request, and `Fresh::refreshing` reads the same whether the
+  refresh came from a timer or a keypress.
+- **`X-Poll-Interval` raises the interval and never lowers it**, and it is
+  re-read every tick rather than cached — GitHub changes it, and a client
+  holding the first value it saw would keep polling at a rate since withdrawn.
+  It applies to notifications, the endpoint that sends it; applying one
+  endpoint's instruction to the dashboard would be inventing policy.
+- **Consecutive failures double the wait**, to a cap. `omaghy-api` already
+  refuses to send while rate limited, so a tick during a limit costs no
+  network — but it still emits `RefreshFailed`, and an offline laptop painting
+  an error banner every sixty seconds for an hour is its own kind of broken.
+  The first success clears the count.
+
+The tasks hold a `Weak` to the store and end when the TUI drops it, so nothing
+has to remember to stop them.
+
 ---
 
 ## 7. Errors
