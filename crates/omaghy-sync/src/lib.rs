@@ -135,12 +135,14 @@ impl Job {
 
         match api.list(&NotificationFilter::default(), validators).await? {
             Conditional::NotModified { validators } => {
+                tracing::info!("inbox unchanged (304), nothing rewritten");
                 self.store.with_cache(|c| {
                     Self::stamp(c, validators, previous.and_then(|m| m.cursor), now)
                 })?;
             }
             Conditional::Modified(page) => {
                 let complete = page.next_page.is_none();
+                tracing::info!(rows = page.items.len(), complete, "inbox updated");
                 self.store.with_cache(|c| {
                     c.put_notifications(&page.items)?;
                     Self::stamp_complete(c, page.validators, complete, now)
@@ -265,7 +267,16 @@ impl Job {
         Ok(())
     }
 
+    /// Run one refresh and report what happened.
+    ///
+    /// **Every completed refresh logs one `info` line.** A TUI owns the
+    /// screen, so the log file is the only window into work that happens
+    /// without a keypress — and until this existed, background fetching was
+    /// entirely invisible at the default level: the poll tick was `debug`, and
+    /// the refresh itself logged nothing at any level. "Is it still polling?"
+    /// had no answer short of a packet capture.
     async fn run(self, target: RefreshTarget) {
+        let started = std::time::Instant::now();
         let result = match &target {
             RefreshTarget::Notifications => self.sync_notifications().await,
             RefreshTarget::NotificationDetails => self.enrich().await,
@@ -290,9 +301,19 @@ impl Job {
                 Err(_) => *failures.entry(target.clone()).or_insert(0) += 1,
             }
         }
+        let ms = started.elapsed().as_millis();
         match result {
-            Ok(()) => self.store.refresh_finished(target),
-            Err(e) => self.store.refresh_failed(target, e),
+            Ok(()) => {
+                tracing::info!(?target, ms, "refresh finished");
+                self.store.refresh_finished(target)
+            }
+            Err(e) => {
+                // `warn`, not `error`: being offline is an ordinary state for
+                // a program someone opens to check whether CI passed, and the
+                // cached rows are still on screen.
+                tracing::warn!(?target, ms, error = %e, "refresh failed");
+                self.store.refresh_failed(target, e)
+            }
         }
         // The list arrives without numbers, states or actors, so a row paints
         // as "awaiting details" until a second pass fills them in. Chained

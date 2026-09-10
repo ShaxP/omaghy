@@ -99,6 +99,9 @@ async fn poll_forever(syncer: Weak<Syncer>, target: RefreshTarget, base: Duratio
 
         let Some(s) = syncer.upgrade() else { return };
         let Some(store) = s.store() else { return };
+        // `debug`: one of these per target per minute says only that a timer
+        // fired. What a reader actually wants — whether the fetch happened and
+        // what it found — is the `info` line `Job::run` writes when it lands.
         tracing::debug!(?target, seconds = wait.whole_seconds(), "poll tick");
         store.refresh(target.clone());
     }
