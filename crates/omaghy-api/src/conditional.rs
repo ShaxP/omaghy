@@ -10,68 +10,40 @@
 //! or write an empty list over it.
 
 use crate::transport::Headers;
-use serde::{Deserialize, Serialize};
+pub use omaghy_model::Validators;
 
-/// What we send back to GitHub to ask "has this changed?".
+/// The HTTP half of [`Validators`].
 ///
-/// Both are opaque strings. `Last-Modified` is never parsed — it is echoed
-/// verbatim into `If-Modified-Since`, which is both what the spec requires and
-/// what avoids a date-format bug in the one place a date format would bite.
-#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub struct Validators {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub etag: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub last_modified: Option<String>,
-}
-
-impl Validators {
-    pub fn none() -> Self {
-        Self::default()
-    }
-
-    pub fn etag(tag: impl Into<String>) -> Self {
-        Self {
-            etag: Some(tag.into()),
-            last_modified: None,
-        }
-    }
-
+/// The type itself lives in `omaghy-model`, because the cache persists it and
+/// this crate harvests it and neither may depend on the other. Turning it into
+/// headers is this crate's business and nothing else's, so it arrives as an
+/// extension trait — a foreign type cannot take an inherent `impl`.
+pub trait ValidatorHeaders {
     /// Harvest whatever the response offered.
     ///
     /// GitHub returns `ETag` on a 304 as well as a 200, so the stored
     /// validator is refreshed on every poll rather than only when the body
     /// changes.
-    pub fn from_headers(headers: &Headers) -> Self {
+    fn from_headers(headers: &Headers) -> Self;
+
+    /// The request headers that turn a fetch into a conditional fetch.
+    fn apply(&self, headers: &mut Headers);
+}
+
+impl ValidatorHeaders for Validators {
+    fn from_headers(headers: &Headers) -> Self {
         Self {
             etag: headers.get("etag").map(str::to_owned),
             last_modified: headers.get("last-modified").map(str::to_owned),
         }
     }
 
-    pub fn is_empty(&self) -> bool {
-        self.etag.is_none() && self.last_modified.is_none()
-    }
-
-    /// The request headers that turn a fetch into a conditional fetch.
-    pub fn apply(&self, headers: &mut Headers) {
+    fn apply(&self, headers: &mut Headers) {
         if let Some(etag) = &self.etag {
             headers.insert("If-None-Match", etag.clone());
         }
         if let Some(lm) = &self.last_modified {
             headers.insert("If-Modified-Since", lm.clone());
-        }
-    }
-
-    /// Keep whatever the new response carried, falling back to what we had.
-    ///
-    /// A 304 that omits `Last-Modified` must not silently drop the one we were
-    /// sending, or the next poll stops being conditional.
-    #[must_use]
-    pub fn merged_with(&self, newer: Validators) -> Validators {
-        Validators {
-            etag: newer.etag.or_else(|| self.etag.clone()),
-            last_modified: newer.last_modified.or_else(|| self.last_modified.clone()),
         }
     }
 }

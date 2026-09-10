@@ -13,7 +13,7 @@
 //! than a visible error.
 
 use crate::auth::Token;
-use crate::conditional::{Conditional, Validators};
+use crate::conditional::{Conditional, ValidatorHeaders, Validators};
 use crate::error;
 use crate::graphql::{self, GraphQlRequest};
 use crate::ratelimit::{Clock, Governor, RateLimits, Resource};

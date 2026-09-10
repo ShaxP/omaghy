@@ -13,7 +13,7 @@
 use async_trait::async_trait;
 use omaghy_api::{Conditional, GitHubClient, NotificationFilter, Notifications};
 use omaghy_cache::{Cache, ListMeta, Remote, SqliteStore};
-use omaghy_model::{NotificationId, Result};
+use omaghy_model::{NotificationId, Result, Validators};
 use omaghy_store::{NotificationQuery, RefreshTarget, Store};
 use std::{
     collections::HashMap,
@@ -24,25 +24,6 @@ use tokio::task::JoinHandle;
 /// Notifications have their own table, but their freshness lives with every
 /// other list's, under this key (`spec/20-store.md` §3).
 const INBOX: &str = "notifications";
-
-/// `omaghy-api` and `omaghy-cache` each define their own `Validators`, with
-/// identical fields, because neither may depend on the other and
-/// `omaghy-model` does not carry the type. Converting here is the smallest fix
-/// that does not block integration; the right one is to move `Validators` into
-/// the model, which is a contract change and merges alone.
-fn to_api(v: omaghy_cache::Validators) -> omaghy_api::Validators {
-    omaghy_api::Validators {
-        etag: v.etag,
-        last_modified: v.last_modified,
-    }
-}
-
-fn to_cache(v: omaghy_api::Validators) -> omaghy_cache::Validators {
-    omaghy_cache::Validators {
-        etag: v.etag,
-        last_modified: v.last_modified,
-    }
-}
 
 /// The pieces a background fetch needs. Cloned into the spawned task, so
 /// `schedule` never needs an owned `Arc<Syncer>`.
@@ -104,12 +85,10 @@ impl Job {
     /// over good data.
     async fn sync_notifications(&self) -> Result<()> {
         let previous = self.store.with_cache(|c| c.list_meta(INBOX))?;
-        let validators = to_api(
-            previous
-                .as_ref()
-                .map(|m| m.validators.clone())
-                .unwrap_or_default(),
-        );
+        let validators = previous
+            .as_ref()
+            .map(|m| m.validators.clone())
+            .unwrap_or_default();
 
         let api = Notifications::new(&self.client);
         let now = self.store.now();
@@ -117,19 +96,14 @@ impl Job {
         match api.list(&NotificationFilter::default(), validators).await? {
             Conditional::NotModified { validators } => {
                 self.store.with_cache(|c| {
-                    Self::stamp(
-                        c,
-                        to_cache(validators),
-                        previous.and_then(|m| m.cursor),
-                        now,
-                    )
+                    Self::stamp(c, validators, previous.and_then(|m| m.cursor), now)
                 })?;
             }
             Conditional::Modified(page) => {
                 let complete = page.next_page.is_none();
                 self.store.with_cache(|c| {
                     c.put_notifications(&page.items)?;
-                    Self::stamp_complete(c, to_cache(page.validators), complete, now)
+                    Self::stamp_complete(c, page.validators, complete, now)
                 })?;
             }
         }
@@ -142,7 +116,7 @@ impl Job {
     /// `list_meta` holds only their freshness.
     fn stamp(
         c: &Cache,
-        validators: omaghy_cache::Validators,
+        validators: Validators,
         cursor: Option<String>,
         now: time::OffsetDateTime,
     ) -> std::result::Result<(), omaghy_model::CacheError> {
@@ -160,7 +134,7 @@ impl Job {
 
     fn stamp_complete(
         c: &Cache,
-        validators: omaghy_cache::Validators,
+        validators: Validators,
         complete: bool,
         now: time::OffsetDateTime,
     ) -> std::result::Result<(), omaghy_model::CacheError> {

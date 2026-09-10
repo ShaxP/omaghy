@@ -203,6 +203,11 @@ Stale never means hidden. Stale data renders normally with an indicator; only
 GitHub offers it. A 304 costs no REST rate limit, so aggressive polling stays
 cheap. Store the validator beside the data and always send it.
 
+`Validators` is `omaghy-model`'s type (`10-domain-model.md` §4) — the fetcher
+and the cache both handle it and neither may depend on the other. `omaghy-api`
+extends it with the header conversions; everything below is behaviour, not
+storage shape.
+
 Measured in W1.1, against the live API: `GET /notifications` returns an `ETag`
 and no `Last-Modified`. **Corrected in W2.1: it does send `Last-Modified`.**
 W1.1 measured an *empty* inbox, which has no most-recently-modified thread to

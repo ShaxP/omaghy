@@ -69,7 +69,7 @@ pub use client::{
     API_VERSION, ClientConfig, DEFAULT_ACCEPT, DEFAULT_BASE_URL, GitHubClient, RestRequest,
     RestResponse,
 };
-pub use conditional::{Conditional, Validators};
+pub use conditional::{Conditional, ValidatorHeaders, Validators};
 pub use graphql::{GraphQlError, GraphQlRequest, Partial, RateLimitField};
 pub use notifications::{
     ENRICHMENT_BATCH, MAX_PER_PAGE, NotificationFilter, NotificationPage, Notifications,
