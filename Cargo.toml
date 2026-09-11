@@ -32,6 +32,7 @@ time        = { version = "0.3", features = ["serde", "parsing", "formatting", "
 # async
 tokio       = { version = "1", features = ["rt-multi-thread", "macros", "sync", "time", "process", "fs", "signal"] }
 async-trait = "0.1"
+futures-util = { version = "0.3", default-features = false, features = ["std"] }
 
 # HTTP — rustls only. default-features = false keeps native-tls (and with it
 # OpenSSL) out; native roots rather than a compiled-in bundle, so a corporate
