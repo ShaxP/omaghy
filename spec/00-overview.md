@@ -181,7 +181,11 @@ Go's `interface{}` plus type switches never stops being ugly. Go's advantage
 was `cli/go-gh` for auth, which evaporated once `gh auth token` proved to be a
 43ms shell-out available from any language.
 
-**A TUI, not a Quickshell/QML overlay.** Explored thoroughly and dropped. The
+**A TUI, not a Quickshell/QML overlay.** Explored thoroughly — including a
+working prototype run against real GitHub data and all 22 installed Omarchy
+themes — and dropped. That prototype is gone, but several of its findings were
+medium-independent and are carried into `30-ui.md` §7.1 and §9, marked there as
+measured rather than reasoned. The
 decisive constraint: a summoned overlay suits glance-and-dismiss triage, but a
 full client involves sustained work, and `Esc` being one keystroke from
 discarding a half-written review is the wrong shape. Secondary: QML has no
