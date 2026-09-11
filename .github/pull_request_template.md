@@ -5,14 +5,25 @@
 ## Smoke test
 
 <!--
-Required whenever this PR changes anything observable. Commands to run and
-what should happen, so the change can be verified without reading the diff.
+Required whenever this PR changes anything a USER CAN OBSERVE.
 
-Delete this section only when there is genuinely nothing to run — a
-spec-only or docs-only PR. In that case use "Review guide" below instead.
+Test behaviour, not the build. Do NOT list cargo build / test / clippy / fmt,
+Cargo.lock greps, or "CI is green" — CI runs those on every PR already, and
+repeating them wastes review time while looking like diligence.
+
+Do list: launch it, do the thing, what should appear. The unhappy paths —
+empty, offline, stale, forbidden, malformed input, terminal too small. Side
+effects. Anything where the feel is the point.
+
+If this PR changes nothing observable — scaffolding, contracts, deps, docs —
+delete the checkboxes and write plainly:
+
+    none. This PR adds no observable behaviour; it <does X>. CI covers that
+    the workspace still builds and its tests pass.
+
+Inventing items for such a PR is worse than omitting them.
 -->
 
-- [ ] `cargo build --workspace` — no warnings
 - [ ] …
 
 **Not covered:** <!-- what this checklist does NOT prove. Be honest. -->
