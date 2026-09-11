@@ -9,3 +9,6 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+serde.workspace     = true
+thiserror.workspace = true
+time.workspace      = true

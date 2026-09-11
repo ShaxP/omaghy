@@ -8,6 +8,14 @@ edition    = "2024"
 license    = "MIT"
 repository = "https://github.com/ShaxP/omaghy"
 
+# P0.1 declares only what omaghy-model needs; P0.2 completes the set for M1.
+# See spec/90-plan.md §2.1 — dependencies are declared here, once, so that
+# concurrent agents never conflict in the generated lockfile.
+[workspace.dependencies]
+serde     = { version = "1", features = ["derive"] }
+thiserror = "2"
+time      = { version = "0.3", features = ["serde", "parsing", "formatting", "macros"] }
+
 [workspace.lints.rust]
 unsafe_code = "forbid"
 missing_debug_implementations = "warn"
