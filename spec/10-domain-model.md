@@ -54,13 +54,24 @@ notification payloads carry only an API URL:
 pub struct SubjectRef {           // parsed from e.g.
     pub owner: String,            //   https://api.github.com/repos/ShaxP/shax/pulls/61
     pub repo: String,
-    pub number: u64,
     pub kind: SubjectKind,
+    pub id: SubjectId,
 }
+
+pub enum SubjectId { Number(u64), Sha(String) }
 ```
+
+> **Corrected in P0.1.** This was specified as `number: u64`, which cannot
+> represent a commit subject — `…/repos/o/r/commits/{sha}` is addressed by SHA.
+> A notification about a commit would have been unparseable and silently
+> dropped its browser URL.
 
 `SubjectRef` is what `o` (open in browser) uses, and it is how an unenriched
 notification still offers a useful action.
+
+`browser_url()` returns `Option`: releases are addressed by numeric id in the
+API but by tag on the web, so the two are not interconvertible without a fetch.
+A release notification opens nothing until enrichment lands.
 
 ---
 
