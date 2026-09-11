@@ -81,6 +81,10 @@ cycles discovering typos.
 with a system requirement updates it in the same PR** — a prerequisites page
 that is wrong at build time is worse than none, because it was trusted.
 
+`Cargo.lock` is **committed**. omaghy ships a binary, so the lockfile is what
+makes a local build, CI, and a packager's build resolve identical dependency
+versions. Do not add it to `.gitignore` — that advice applies to libraries.
+
 Two policies in `PREREQUISITES.md` §5 are load-bearing and must not be broken
 casually: **no OpenSSL** (`rustls` with the `ring` provider, system root certs)
 and **bundled SQLite**. Both keep the build free of system libraries; taking a

@@ -35,6 +35,10 @@ install or optional.
 | ⏳ **No `cmake`** | Deliberate — see §5.1. If a future dependency introduces `aws-lc-rs`, `cmake` and `nasm` become required and **this table must change**. | — |
 | ⏳ **No OpenSSL** | Deliberate — see §5.1. | — |
 
+`Cargo.lock` is committed, so a plain `cargo build` resolves exactly the
+dependency versions CI tested. Use `cargo build --locked` to make a mismatch an
+error rather than a silent update — this is what a packager should use.
+
 Disk: a full debug build of a workspace this size, with `reqwest` and
 `rusqlite` bundled, is realistically **1.5–3 GB** in `target/`. Budget for it.
 
