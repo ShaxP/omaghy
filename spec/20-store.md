@@ -1,6 +1,7 @@
 # omaghy — the Store
 
-`Store` is the only seam `omaghy-tui` sees. Everything about the network, the
+`Store` is the only seam `omaghy-tui` sees. It lives in its own crate,
+`omaghy-store` — see `00-overview.md` §4. Everything about the network, the
 cache, freshness, and retries lives behind it.
 
 It exists for two reasons. First, **latency is the design problem**: ~700ms per

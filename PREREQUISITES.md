@@ -32,8 +32,8 @@ install or optional.
 | ✅ **`clippy`, `rustfmt`** | Required by CI; `rust-toolchain.toml` installs them with the toolchain. | — |
 | ✅ **C compiler + linker** | SQLite is compiled from source (§5.2). | `base-devel` |
 | ✅ **`pkg-config`** | Probing for system libraries. | `base-devel` |
-| ⏳ **No `cmake`** | Deliberate — see §5.1. If a future dependency introduces `aws-lc-rs`, `cmake` and `nasm` become required and **this table must change**. | — |
-| ⏳ **No OpenSSL** | Deliberate — see §5.1. | — |
+| ✅ **No `cmake`** | Deliberate — see §5.1. Verified in P0.2: the lockfile contains `ring`, and no `aws-lc-rs` or `aws-lc-sys`. | — |
+| ✅ **No OpenSSL** | Deliberate — see §5.1. Verified in P0.2: no `openssl`, `openssl-sys` or `native-tls` in the lockfile. | — |
 
 `Cargo.lock` is committed, so a plain `cargo build` resolves exactly the
 dependency versions CI tested. Use `cargo build --locked` to make a mismatch an
@@ -41,6 +41,7 @@ error rather than a silent update — this is what a packager should use.
 
 Disk: a full debug build of a workspace this size, with `reqwest` and
 `rusqlite` bundled, is realistically **1.5–3 GB** in `target/`. Budget for it.
+The dependency tree is 355 crates as of P0.2.
 
 ---
 
@@ -91,6 +92,19 @@ Two sub-decisions that follow:
   targets. `ring` needs only the C compiler already required by §5.2. The
   provider must be pinned explicitly; taking the default silently adds a build
   dependency.
+
+  **In practice this is a feature-flag trap.** `reqwest`'s plain `rustls`
+  feature selects `aws-lc-rs`. The combination that does not is:
+
+  ```toml
+  reqwest = { default-features = false,
+              features = ["rustls-no-provider", "rustls-native-certs", …] }
+  rustls  = { default-features = false, features = ["ring", "std", "tls12"] }
+  ```
+
+  `omaghy-api` then installs the provider once at startup. Verify with
+  `grep -E '^name = "(ring|aws-lc-sys|openssl-sys)"' Cargo.lock` — `ring`
+  should be the only hit.
 - **Root certificates come from the system store** via `rustls-native-certs`,
   not from a compiled-in `webpki-roots` bundle. Compiled-in roots break anyone
   behind a corporate TLS-inspecting proxy, and fail in a way that looks like a

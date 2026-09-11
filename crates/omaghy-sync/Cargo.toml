@@ -9,3 +9,10 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+omaghy-model.workspace = true
+omaghy-store.workspace = true
+omaghy-api.workspace   = true
+omaghy-cache.workspace = true
+time.workspace         = true
+tokio.workspace        = true
+tracing.workspace      = true

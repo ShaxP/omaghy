@@ -74,7 +74,8 @@ A **single binary**. No daemon, no IPC, no wire protocol.
 ```
 crates/
   omaghy-model    domain types + serde. depends on nothing.
-  omaghy-api      reqwest · cynic (GraphQL) · REST · ETag · retry · rate governor
+  omaghy-store    the Store trait + FakeStore. the seam omaghy-tui sees.
+  omaghy-api      reqwest · GraphQL · REST · ETag · retry · rate governor
   omaghy-cache    rusqlite — entities, etags, cursors, TTL
   omaghy-sync     scheduler, refresh policy, delta computation
   omaghy-tui      ratatui — router, surfaces, widgets, keymap, theme
@@ -84,6 +85,11 @@ crates/
 Dependencies point strictly downward; `omaghy-model` is a leaf. `omaghy-tui`
 never performs I/O — it consumes the `Store` trait (§5).
 
+`omaghy-store` was added in P0.2. The trait needs a home that is neither the
+vocabulary nor an implementation: `omaghy-model` must stay a leaf, and it would
+otherwise need `async-trait` and `tokio`; putting the trait in `omaghy-cache`
+would make the UI depend on a storage backend.
+
 ### 4.1 Reads are GraphQL, writes and oddities are REST
 
 A PR list with review state, CI status, and labels is *one* GraphQL query
@@ -91,6 +97,13 @@ instead of N+3 REST round-trips. Measured against the live API, a combined
 dashboard query (viewer + two searches + rate limit) costs **1 point of 5000**
 and ~700ms. REST is retained for raw diffs (`Accept: vnd.github.v3.diff`),
 Actions job logs, and mutations GraphQL does not expose.
+
+**Queries are hand-written and deserialized with `serde_json`**, not generated.
+An earlier draft specified `cynic`, whose compile-time query validation is
+genuinely valuable — but it requires committing GitHub's ~5 MB schema and a
+codegen step, and M1 has under a dozen queries. The translation boundary is
+already mandatory (`10-domain-model.md` §1), so adopting `cynic` later is a
+change contained entirely within `omaghy-api`.
 
 ### 4.2 Latency is the design problem, not throughput
 

@@ -9,3 +9,14 @@ repository.workspace = true
 workspace = true
 
 [dependencies]
+omaghy-model.workspace = true
+omaghy-store.workspace = true
+reqwest.workspace      = true
+rustls.workspace       = true
+serde.workspace        = true
+serde_json.workspace   = true
+thiserror.workspace    = true
+time.workspace         = true
+tokio.workspace        = true
+tracing.workspace      = true
+async-trait.workspace  = true
