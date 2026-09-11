@@ -5,7 +5,20 @@
 //! need `async-trait` and `tokio`), and putting the trait in `omaghy-cache`
 //! would make the UI depend on a storage backend.
 //!
-//! The trait, `FakeStore`, and the fixtures land in P0.3; this crate is
-//! created in P0.2 so the dependency graph is settled before any fan-out.
+//! Two implementations ship, and the TUI cannot tell them apart:
+//! `SqliteStore` (in `omaghy-cache`, M1 Wave 1) and [`fake::FakeStore`], which
+//! is what surface agents build against and what snapshot tests run on.
 //!
 //! See `spec/20-store.md`.
+
+pub mod event;
+pub mod fake;
+pub mod fresh;
+pub mod query;
+pub mod store;
+
+pub use event::{RefreshTarget, StoreEvent};
+pub use fake::FakeStore;
+pub use fresh::{Fresh, Source};
+pub use query::{DashboardConfig, DashboardSection, NotificationQuery, Page, ReadFilter};
+pub use store::{Dashboard, DashboardSectionData, Store, Viewer};

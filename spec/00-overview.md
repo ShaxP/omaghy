@@ -171,7 +171,10 @@ This project is built by parallel agents, so verification is a first-class
 constraint rather than hygiene.
 
 - **No test touches the network.** `omaghy-api` is tested against recorded
-  fixtures; `fixtures/` holds the shared corpus.
+  fixtures. The notification corpus lives in `omaghy-store::fake::corpus()`,
+  in Rust rather than as JSON, so it cannot drift from the model types or fail
+  to parse at runtime. HTTP cassettes for `omaghy-api` are recorded in W1.1,
+  when there are requests to record responses for.
 - **Screens are snapshot-tested.** ratatui's `TestBackend` renders to an
   inspectable text buffer, so a surface's output is asserted like any value.
   Every surface ships snapshots for: populated, empty, filtered, loading-from-

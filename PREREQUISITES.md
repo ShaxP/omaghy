@@ -69,7 +69,6 @@ by default.
 | | Why | Install |
 |---|---|---|
 | ✅ **`gh`** | The PR workflow in `CONTRIBUTING.md`. | `pacman -S github-cli` |
-| ✅ **Python 3** | `fixtures/build-fixture.py` regenerates the test corpus. Stdlib only — no venv, no pip. | `pacman -S python` |
 | ⚪ **`cargo-nextest`** | Faster, clearer test runs. CI uses plain `cargo test`. | `cargo install cargo-nextest` |
 | ⚪ **`cargo-insta`** | Reviewing snapshot diffs for TUI screens (`spec/00-overview.md` §7). | `cargo install cargo-insta` |
 

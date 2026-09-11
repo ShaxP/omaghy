@@ -32,7 +32,7 @@ because everything downstream depends on all of them.
 |---|---|---|
 | **P0.1** | `omaghy-model`: every type in `10-domain-model.md`, plus the error taxonomy. Declares `serde`, `time`, `thiserror` — the three it cannot be written without. | The vocabulary. Every crate speaks it; two agents inventing it separately is the most expensive possible failure. |
 | **P0.2** | **Every remaining M1 dependency**, declared in `[workspace.dependencies]` | See §2.1 — this is not optional bookkeeping. |
-| **P0.3** | `Store` trait, `FakeStore`, recorded HTTP fixtures | The seam. UI agents build against `FakeStore` while API agents build against cassettes; they meet here. |
+| **P0.3** | `Store` trait, `FakeStore`, the notification corpus | The seam. UI agents build against `FakeStore` while API agents build against cassettes; they meet here. **HTTP cassettes move to W1.1** — responses cannot be recorded for requests that do not exist yet. |
 | **P0.4** | App shell: terminal setup, panic hook, event loop, router, `Surface` trait, **registry pre-wired with stub surfaces** | See §2.2. |
 
 ### 2.1 Declare every dependency up front

@@ -226,9 +226,11 @@ Two implementations ship, and the TUI cannot tell them apart:
 
 - **`SqliteStore`** — the real one. Tested against recorded HTTP fixtures; no
   test opens a socket.
-- **`FakeStore`** — backed by `fixtures/`, with knobs for staleness, latency,
-  failure injection, and rate limiting. This is what surface agents build
-  against, and what snapshot tests run on so screens are deterministic.
+- **`FakeStore`** — backed by `fake::corpus()`, with a `Behaviour` struct
+  toggling staleness, emptiness, cold cache, in-flight refresh, and read/write
+  failure injection. This is what surface agents build against, and what
+  snapshot tests run on so screens are deterministic. Its clock is fixed
+  (`FIXTURE_NOW`) so relative ages never make a snapshot fail on a Tuesday.
 
 `FakeStore` must be able to produce every arm of §7 on demand. Error states are
 the ones that get skipped otherwise, and they are most of what a user sees on a
