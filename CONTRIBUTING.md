@@ -44,36 +44,66 @@ why merge commits are allowed.
 
 ## Every PR carries a smoke test
 
-**If a PR changes anything observable, it must include a smoke test checklist**
-in its description: the commands to run and what should happen, written so the
-change can be verified without reading the diff.
+**If a PR changes anything a user can observe, it must include a smoke test
+checklist** in its description: the commands to run and what should happen,
+written so the change can be verified without reading the diff.
 
 This is not ceremony. It is how the author states what they actually verified,
 and it keeps review from collapsing into "the diff looks fine."
 
+### Test behaviour, not the build
+
+A smoke test asks *does this work*, never *does this compile*.
+
+**Never put these in a checklist.** CI runs them on every PR as a required
+check, and repeating them wastes the reviewer's time while looking like
+diligence:
+
+- `cargo build` · `cargo test` · `cargo clippy` · `cargo fmt --check`
+- `grep`-ing `Cargo.lock`, `cargo tree`, or any other build-system introspection
+- "the CI check is green" — visible on the PR already
+
+**Put these in instead** — things only a human running the program can see:
+
+- Launch it. Do the thing the PR is about. Describe what should appear.
+- The unhappy paths: empty, offline, stale, forbidden, rate-limited, malformed
+  input, a terminal too small, a missing token.
+- Anything where the *feel* is the point — latency, flicker, whether the cursor
+  lands where you left it.
+- Side effects: a file written, a cache row created, a notification fired.
+
+### "No smoke test" is a valid answer
+
+Scaffolding, contracts, dependency wiring, and docs change nothing a user can
+observe. **Say so plainly and move on:**
+
+> **Smoke test:** none. This PR adds no observable behaviour — it declares
+> dependencies. CI covers that the workspace still builds and its tests pass.
+
+Inventing checklist items for such a PR is worse than omitting them: it trains
+the reviewer to tick boxes without reading, which is exactly what the
+convention exists to prevent.
+
+### Shape
+
 A good checklist:
 
+- **starts by getting the reviewer into position.** They are on `main`, not on
+  your branch. Open with `gh pr checkout <n>`, and name any other state the
+  steps assume — a built binary, a warm cache, an empty one, no network.
 - gives **exact commands**, copy-pasteable, no "and then poke around"
 - states the **expected result** for each, specifically enough to be wrong
-- covers the **unhappy paths** — empty, offline, stale, error — not just the demo
+- covers the **unhappy paths**, not just the demo
 - ends with **"Not covered"**, naming honestly what it does not prove
 
-Spec- and docs-only PRs have nothing to run. They use a **Review guide**
-instead: where to look and which decision to check. Point at what is worth
-arguing with, not at the whole diff.
+> **A check that cannot fail is worse than no check.** If running a step in the
+> wrong state still looks like a pass, it verifies nothing and yet gets ticked.
+> Real example: `grep aws-lc-sys Cargo.lock` finds nothing on a branch where the
+> dependency was never added *and* on `main`, which simply predates it. State
+> the position, and prefer expected output that is present rather than absent.
 
-## CI
-
-`build · clippy · test` is a required check and runs `cargo fmt --check`,
-`cargo clippy --all-targets`, `cargo test`, and `cargo build` — all with
-`-D warnings`. Branches must be up to date with `main` before merging.
-
-That last rule is strict on purpose: `omaghy-model` is a shared dependency, and
-a change there breaking another crate is precisely the parallel-work failure
-mode worth catching at merge time.
-
-Run it locally before pushing. An agent that cannot run `cargo test` burns CI
-cycles discovering typos.
+Spec- and docs-only PRs use a **Review guide** instead: where to look and which
+decision to check. Point at what is worth arguing with, not at the whole diff.
 
 ## Dependencies
 
