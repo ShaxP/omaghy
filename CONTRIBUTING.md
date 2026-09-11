@@ -75,6 +75,21 @@ mode worth catching at merge time.
 Run it locally before pushing. An agent that cannot run `cargo test` burns CI
 cycles discovering typos.
 
+## Dependencies
+
+`PREREQUISITES.md` is the build-and-run contract. **Any PR adding a dependency
+with a system requirement updates it in the same PR** — a prerequisites page
+that is wrong at build time is worse than none, because it was trusted.
+
+`Cargo.lock` is **committed**. omaghy ships a binary, so the lockfile is what
+makes a local build, CI, and a packager's build resolve identical dependency
+versions. Do not add it to `.gitignore` — that advice applies to libraries.
+
+Two policies in `PREREQUISITES.md` §5 are load-bearing and must not be broken
+casually: **no OpenSSL** (`rustls` with the `ring` provider, system root certs)
+and **bundled SQLite**. Both keep the build free of system libraries; taking a
+crate default silently reverses either one.
+
 ## Crate ownership
 
 Dependencies point strictly downward; `omaghy-model` depends on nothing.
