@@ -1,0 +1,55 @@
+# Verifies PREREQUISITES.md §1 in a clean Arch container.
+#
+# A prerequisites page can only be tested on a machine that does not already
+# have the prerequisites. This builds omaghy from nothing but the packages §1
+# names — so if that list is incomplete, this job fails and the page gets
+# fixed before someone else trusts it.
+name: prerequisites
+
+on:
+  pull_request:
+    paths:
+      - PREREQUISITES.md
+      - Cargo.toml
+      - Cargo.lock
+      - rust-toolchain.toml
+      - crates/*/Cargo.toml
+      - .github/workflows/prerequisites.yml
+  schedule:
+    - cron: "0 6 * * 1"     # Mondays — catches upstream drift, not our changes
+  workflow_dispatch:
+
+jobs:
+  cleanroom:
+    name: clean Arch container
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build from only what §1 names
+        run: |
+          docker run --rm -v "$PWD:/src:ro" docker.io/library/archlinux:latest bash -euo pipefail -c '
+            pacman-key --init >/dev/null 2>&1 || true
+            pacman -Sy --noconfirm --needed archlinux-keyring >/dev/null
+
+            # ---- PREREQUISITES.md §1, verbatim ----
+            pacman -S --noconfirm --needed rustup base-devel git github-cli
+            rustup default stable
+            # ---- end §1 ----
+
+            echo "::group::§5 policy assertions"
+            if command -v cmake >/dev/null; then
+              echo "cmake is present — §5.1 claims it is not required."
+              echo "That is not a failure by itself, but the build below must not need it."
+            else
+              echo "cmake absent, as §5.1 intends"
+            fi
+            command -v gcc pkg-config make
+            echo "::endgroup::"
+
+            cp -r /src /build && cd /build
+            cargo build --release --locked
+            ./target/release/omaghy
+
+            echo "CLEANROOM OK — §1 is sufficient"
+          '
