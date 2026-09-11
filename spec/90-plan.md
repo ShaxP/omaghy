@@ -69,6 +69,7 @@ and never again.
 
 ```
 crates/omaghy-model/          ← contracts only; changed in Phase 0 or by request
+crates/omaghy-store/          ← contracts only; likewise
 crates/omaghy-api/            ← one owner
 crates/omaghy-cache/          ← one owner
 crates/omaghy-sync/           ← one owner

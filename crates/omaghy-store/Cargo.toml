@@ -1,5 +1,5 @@
 [package]
-name       = "omaghy-tui"
+name       = "omaghy-store"
 version.workspace    = true
 edition.workspace    = true
 license.workspace    = true
@@ -10,13 +10,7 @@ workspace = true
 
 [dependencies]
 omaghy-model.workspace = true
-omaghy-store.workspace = true
-ratatui.workspace      = true
-crossterm.workspace    = true
-tui-input.workspace    = true
+async-trait.workspace  = true
 time.workspace         = true
 tokio.workspace        = true
-tracing.workspace      = true
-
-[dev-dependencies]
-insta.workspace = true
+serde.workspace        = true
