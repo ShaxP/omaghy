@@ -1,0 +1,81 @@
+//! The trait. The only seam `omaghy-tui` sees.
+//!
+//! Two rules, from `spec/20-store.md` §1:
+//!
+//! **Reads never touch the network.** They answer from cache immediately —
+//! possibly stale, possibly empty. A read that blocks on a socket is a bug.
+//!
+//! **Refresh is fire-and-forget.** There is deliberately no "await the fresh
+//! data" call; offering one guarantees somebody awaits it in a draw path.
+
+use crate::{
+    event::{RefreshTarget, StoreEvent},
+    fresh::Fresh,
+    query::{DashboardConfig, NotificationQuery, Page},
+};
+use async_trait::async_trait;
+use omaghy_model::{Notification, NotificationId, Result};
+use tokio::sync::broadcast;
+
+/// Who we are acting as. Every cache row is keyed by this: `i_am_requested`,
+/// `my_review` and `unread` all answer "does this need *me*".
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Viewer {
+    pub login: String,
+}
+
+impl Viewer {
+    pub fn new(login: impl Into<String>) -> Self {
+        Self {
+            login: login.into(),
+        }
+    }
+}
+
+/// One dashboard section, resolved.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct DashboardSectionData {
+    pub title: String,
+    pub query: String,
+    /// Rendered rows. Typed per-surface in M2; notifications-shaped for now.
+    pub count: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct Dashboard {
+    pub sections: Vec<DashboardSectionData>,
+}
+
+/// The M1 surface of the store.
+///
+/// Pull requests, issues, actions, repositories and search join this trait in
+/// M2–M4. They are deliberately absent rather than stubbed: a method nothing
+/// implements is a contract nobody has checked.
+#[async_trait]
+pub trait Store: Send + Sync + 'static {
+    /// Change notification. Events name what changed and carry no data.
+    fn subscribe(&self) -> broadcast::Receiver<StoreEvent>;
+
+    fn viewer(&self) -> &Viewer;
+
+    // ---- reads: cache only, never block on the network ------------------
+
+    async fn dashboard(&self, cfg: &DashboardConfig) -> Result<Fresh<Dashboard>>;
+
+    async fn notifications(&self, q: &NotificationQuery) -> Result<Fresh<Page<Notification>>>;
+
+    // ---- refresh: schedules and returns ---------------------------------
+
+    /// Schedule work. Results arrive as [`StoreEvent::Updated`].
+    fn refresh(&self, target: RefreshTarget);
+
+    /// Cancel work for a surface the user has left.
+    fn cancel(&self, target: &RefreshTarget);
+
+    // ---- mutations: optimistic, with rollback ---------------------------
+
+    /// Idempotent: marking an already-read thread must not error.
+    async fn mark_read(&self, ids: &[NotificationId]) -> Result<()>;
+
+    async fn mark_unread(&self, ids: &[NotificationId]) -> Result<()>;
+}
