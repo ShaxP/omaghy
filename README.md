@@ -37,6 +37,16 @@ finding things.
 | [`spec/00-overview.md`](spec/00-overview.md) | Product, surfaces, milestones, architecture, decisions already made |
 | [`spec/10-domain-model.md`](spec/10-domain-model.md) | The vocabulary `omaghy-model` owns |
 
+## Building
+
+See [PREREQUISITES.md](PREREQUISITES.md). On Omarchy:
+
+```bash
+sudo pacman -S --needed rustup base-devel git github-cli
+rustup default stable
+cargo build --release
+```
+
 ## Auth
 
 No OAuth app, no stored credentials. Token resolution is
