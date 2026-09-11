@@ -24,6 +24,10 @@ delete the checkboxes and write plainly:
 Inventing items for such a PR is worse than omitting them.
 -->
 
+```bash
+gh pr checkout <n>    # the reviewer starts on main, not on your branch
+```
+
 - [ ] …
 
 **Not covered:** <!-- what this checklist does NOT prove. Be honest. -->

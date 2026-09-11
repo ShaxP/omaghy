@@ -88,10 +88,19 @@ convention exists to prevent.
 
 A good checklist:
 
+- **starts by getting the reviewer into position.** They are on `main`, not on
+  your branch. Open with `gh pr checkout <n>`, and name any other state the
+  steps assume — a built binary, a warm cache, an empty one, no network.
 - gives **exact commands**, copy-pasteable, no "and then poke around"
 - states the **expected result** for each, specifically enough to be wrong
 - covers the **unhappy paths**, not just the demo
 - ends with **"Not covered"**, naming honestly what it does not prove
+
+> **A check that cannot fail is worse than no check.** If running a step in the
+> wrong state still looks like a pass, it verifies nothing and yet gets ticked.
+> Real example: `grep aws-lc-sys Cargo.lock` finds nothing on a branch where the
+> dependency was never added *and* on `main`, which simply predates it. State
+> the position, and prefer expected output that is present rather than absent.
 
 Spec- and docs-only PRs use a **Review guide** instead: where to look and which
 decision to check. Point at what is worth arguing with, not at the whole diff.
