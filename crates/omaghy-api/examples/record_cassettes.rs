@@ -32,6 +32,7 @@ use omaghy_api::{
     ReqwestTransport, RestRequest, RetryPolicy, Token, Transport, TransportError, auth,
 };
 use std::path::PathBuf;
+use std::process::ExitCode;
 use std::sync::{Arc, Mutex};
 
 /// The account the "does not exist" recordings address. Any public owner
@@ -109,8 +110,21 @@ fn write(name: &str, note: &str, interactions: Vec<Interaction>) -> Result<(), B
     Ok(())
 }
 
+/// Prints the error's own words rather than its `Debug`. The whole point of
+/// the taxonomy is that each arm says something actionable; `Auth(Rejected)`
+/// says none of it.
 #[tokio::main]
-async fn main() -> Result<(), Boxed> {
+async fn main() -> ExitCode {
+    match run().await {
+        Ok(()) => ExitCode::SUCCESS,
+        Err(e) => {
+            eprintln!("error: {e}");
+            ExitCode::FAILURE
+        }
+    }
+}
+
+async fn run() -> Result<(), Boxed> {
     let resolved = auth::resolve_token()?;
     println!("token from {}", resolved.source.describe());
 
