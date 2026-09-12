@@ -1,0 +1,52 @@
+{
+  "name": "notifications_conditional",
+  "note": "A 200 and then the same request with If-None-Match, answered 304. X-RateLimit-Used is identical across the pair: a 304 costs nothing, which is what makes polling affordable. The empty body is deliberate — an inbox with contents may name private repositories and is never recorded from this public repository.",
+  "recorded_at": "2026-09-12T08:04:59.225928497Z",
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/notifications?per_page=1"
+      },
+      "response": {
+        "status": 200,
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "etag": "\"72b03102f20292d9828252a1a36009b86e9542d63878eb4b0006d452abb017e5\"",
+          "x-accepted-oauth-scopes": "notifications, repo",
+          "x-github-api-version-selected": "2022-11-28",
+          "x-github-media-type": "github.v3; format=json",
+          "x-oauth-scopes": "gist, read:org, repo, workflow",
+          "x-poll-interval": "60",
+          "x-ratelimit-limit": "5000",
+          "x-ratelimit-remaining": "4991",
+          "x-ratelimit-reset": "1789201437",
+          "x-ratelimit-resource": "core",
+          "x-ratelimit-used": "9"
+        },
+        "body": "[]"
+      }
+    },
+    {
+      "request": {
+        "method": "GET",
+        "path": "/notifications?per_page=1",
+        "if_none_match": "\"72b03102f20292d9828252a1a36009b86e9542d63878eb4b0006d452abb017e5\""
+      },
+      "response": {
+        "status": 304,
+        "headers": {
+          "etag": "\"72b03102f20292d9828252a1a36009b86e9542d63878eb4b0006d452abb017e5\"",
+          "x-github-api-version-selected": "2022-11-28",
+          "x-poll-interval": "60",
+          "x-ratelimit-limit": "5000",
+          "x-ratelimit-remaining": "4991",
+          "x-ratelimit-reset": "1789201437",
+          "x-ratelimit-resource": "core",
+          "x-ratelimit-used": "9"
+        },
+        "body": ""
+      }
+    }
+  ]
+}
