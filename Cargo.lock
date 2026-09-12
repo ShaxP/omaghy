@@ -1488,7 +1488,9 @@ dependencies = [
 name = "omaghy-tui"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "crossterm",
+ "futures-util",
  "insta",
  "omaghy-model",
  "omaghy-store",
