@@ -195,9 +195,17 @@ open and whether the UI says so:
 Stale never means hidden. Stale data renders normally with an indicator; only
 *absent* data shows an empty state.
 
-**Conditional requests everywhere.** ETags on REST, `Last-Modified` on
-notifications. A 304 costs no REST rate limit, so aggressive polling stays
+**Conditional requests everywhere.** ETags on REST, `Last-Modified` where
+GitHub offers it. A 304 costs no REST rate limit, so aggressive polling stays
 cheap. Store the validator beside the data and always send it.
+
+Measured in W1.1, against the live API: `GET /notifications` returns an `ETag`
+and **no `Last-Modified`** — an earlier draft of this section had it the other
+way round. `omaghy-api` stores and sends both, because other endpoints do send
+`Last-Modified` and a validator we hold but do not send is worthless. The 304
+claim is confirmed: `X-RateLimit-Used` was identical across the recorded
+200/304 pair, and the pair is committed as
+`crates/omaghy-api/tests/cassettes/notifications_conditional.json`.
 
 ---
 
@@ -225,11 +233,21 @@ already-read thread must not error.
 **1 point**), **REST is requests-based** (5000/hr, 304s free). Track both
 independently from response headers in `kv`.
 
+Both arrive through the *same* `X-RateLimit-*` headers, distinguished by
+**`X-RateLimit-Resource`** (`core` or `graphql`) — W1.1. A response naming any
+other resource (`search` is 30/min) belongs to neither budget and is ignored
+rather than filed under `core`, where it would read as an outage.
+
 **Respect `X-Poll-Interval`.** GitHub tells you how often to poll notifications
 and it is not a suggestion — ignoring it earns secondary rate limits.
 
 Back off on: primary limit (wait for reset), secondary limit (exponential, and
 never retry a mutation automatically), and 5xx (exponential, capped).
+
+The first two are not waited out *inline*: `omaghy-api` records when sending
+may resume, refuses everything until then, and fails the call, because blocking
+a refresh for the minutes GitHub asked for is indistinguishable from a hang.
+Only 5xx and an unreachable host are retried within one call.
 
 Coalesce refreshes: the same target requested twice while in flight is one
 request with two waiters. Cancel refreshes for surfaces the user has left.
@@ -241,14 +259,22 @@ request with two waiters. Cancel refreshes for surfaces the user has left.
 ```rust
 pub enum StoreError {
     Auth(AuthError),                                    // missing, expired, scope
-    RateLimited { until: OffsetDateTime, secondary: bool },
-    Offline,                                            // DNS/TLS/timeout
+    RateLimited { kind: LimitKind, at: OffsetDateTime }, // Primary | Secondary
+    Offline(String),                                    // DNS/TLS/timeout, and which
     NotFound,
     Forbidden,                                          // lost access — distinct from NotFound
     Upstream { status: u16, message: String },
     Cache(CacheError),
 }
 ```
+
+Two shapes differ from this section's first draft, corrected here to the ones
+P0.1 landed and W1.1 is the first code to consume. `secondary: bool` became
+`LimitKind`, because the two limits differ in more than a flag — a secondary
+limit forbids automatic retry of a mutation and a primary one does not — and an
+enum makes the distinction nameable at the call site. `Offline` carries the
+cause, because "GitHub is unreachable" alone does not tell a user whether to
+check their VPN or their DNS.
 
 The distinctions earn their place by producing different UI: `Offline` with
 cache shows stale data plus a banner; `Offline` without shows an empty state
