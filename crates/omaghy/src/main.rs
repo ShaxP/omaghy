@@ -2,7 +2,7 @@
 //!
 //! See `spec/00-overview.md`.
 
-use anyhow::{Context, Result};
+use anyhow::{Context, Result, bail};
 use clap::Parser;
 use omaghy_store::FakeStore;
 use omaghy_tui::{App, Route, terminal};
@@ -45,6 +45,16 @@ async fn run(route: Route) -> Result<()> {
     // Store reaches the screen.
     let store = Arc::new(FakeStore::with_corpus());
     let now = omaghy_store::fake::FIXTURE_NOW;
+
+    // Without this the failure is `No such device or address (os error 6)`,
+    // which is what you get piping omaghy, running it from a script, or in a
+    // container. Name the actual problem instead.
+    if !std::io::IsTerminal::is_terminal(&std::io::stdout()) {
+        bail!(
+            "omaghy needs an interactive terminal — stdout is not a TTY.\n\
+             If you are piping or scripting, there is no non-interactive mode yet."
+        );
+    }
 
     let mut tui = terminal::init().context("could not set up the terminal")?;
     let _guard = terminal::Guard;

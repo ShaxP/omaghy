@@ -49,7 +49,11 @@ jobs:
 
             cp -r /src /build && cd /build
             cargo build --release --locked
-            ./target/release/omaghy
+
+            # Not `./target/release/omaghy` — that launches the TUI, and a
+            # container has no TTY. --version exercises the binary without
+            # touching the terminal.
+            ./target/release/omaghy --version
 
             echo "CLEANROOM OK — §1 is sufficient"
           '
