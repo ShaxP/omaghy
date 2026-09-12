@@ -1,0 +1,43 @@
+---
+source: crates/omaghy-tui/src/widgets/snapshots.rs
+expression: out
+---
+── open ──
+
+    ┌ command ─────────────────────────────────────────────────────────────┐
+    │ ▏                                                                   │
+    │──────────────────────────────────────────────────────────────────────│
+    │▸ app.back                        back                             Esc│
+    │  app.help                        this screen                        ?│
+    │  app.open                        open on github.com                 o│
+    │  app.palette                     command palette                    :│
+    │  app.quit                        quit                      q / Ctrl-C│
+    │  app.refresh                     refresh                            r│
+    │  app.surface                     jump to surface                  1–7│
+    │  notification.mark-read          toggle read                    Enter│
+    │  notification.unread-only        unread only                        u│
+    └──────────────────────────────────────────────────────────────────────┘
+
+── query ──
+
+    ┌ command ─────────────────────────────────────────────────────────────┐
+    │ mark▏                                                               │
+    │──────────────────────────────────────────────────────────────────────│
+    │▸ notification.mark-read          toggle read                    Enter│
+    └──────────────────────────────────────────────────────────────────────┘
+
+
+
+
+
+
+
+
+
+── no matches ──
+
+    ┌ command ─────────────────────────────────────────────────────────────┐
+    │ zzz▏                                                                │
+    │──────────────────────────────────────────────────────────────────────│
+    │  No action matches.                                                 │
+    └──────────────────────────────────────────────────────────────────────┘

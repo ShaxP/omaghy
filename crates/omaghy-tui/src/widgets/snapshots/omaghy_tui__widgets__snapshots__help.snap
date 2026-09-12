@@ -1,0 +1,51 @@
+---
+source: crates/omaghy-tui/src/widgets/snapshots.rs
+expression: out
+---
+── unicode ──
+
+
+
+    ┌ keys ────────────────────────────────────────────────────────────────┐
+    │ This surface                                                         │
+    │  j / k       move                  notification.next                 │
+    │  Enter       toggle read           notification.mark-read            │
+    │  u           unread only           notification.unread-only          │
+    │                                                                      │
+    │ Everywhere                                                           │
+    │  q / Ctrl-C  quit                  app.quit                          │
+    │  Esc         back                  app.back                          │
+    │  ?           this screen           app.help                          │
+    │  :           command palette       app.palette                       │
+    │  r           refresh               app.refresh                       │
+    │  o           open on github.com    app.open                          │
+    │  1–7         jump to surface       app.surface                       │
+    │                                                                      │
+    │  j / k scroll · any key closes                                      │
+    └──────────────────────────────────────────────────────────────────────┘
+
+
+
+
+
+── ascii ──
+
+
+
+    ┌ keys ────────────────────────────────────────────────────────────────┐
+    │ This surface                                                         │
+    │  j / k       move                  notification.next                 │
+    │  Enter       toggle read           notification.mark-read            │
+    │  u           unread only           notification.unread-only          │
+    │                                                                      │
+    │ Everywhere                                                           │
+    │  q / Ctrl-C  quit                  app.quit                          │
+    │  Esc         back                  app.back                          │
+    │  ?           this screen           app.help                          │
+    │  :           command palette       app.palette                       │
+    │  r           refresh               app.refresh                       │
+    │  o           open on github.com    app.open                          │
+    │  1–7         jump to surface       app.surface                       │
+    │                                                                      │
+    │ h j / k scroll - any key closes                                      │
+    └──────────────────────────────────────────────────────────────────────┘

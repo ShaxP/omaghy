@@ -1,0 +1,157 @@
+---
+source: crates/omaghy-tui/src/widgets/snapshots.rs
+expression: "state_matrix_screens(Icons::ASCII).await"
+---
+── cold ──
+ Notifications - 0 unread · 0 total                               0 not fetched & ShaxP
+  ----------------------------------------------------------
+  ----------------------------------------
+  --------------------------------------------------------------------
+  ------------------------------------------------
+  -----------------------------------------------------
+  ----------------------------------------------------------
+  ----------------------------------------
+  --------------------------------------------------------------------
+  ------------------------------------------------
+  | Loading
+ j / k move  Enter toggle read  ? help
+
+── populated ──
+ Notifications - 8 unread · 8 total                                             & ShaxP
+>* o Add SocketServer reconnect backoff and idle tim~ ~/quickshell                    4m
+ * o Short one                                        ~/an-equally-long-r~            9m
+ * o Bar widget plugins should be able to declare a ~ basecamp/omarchy               22m
+ * W CI failed on main                                shax                           41m
+ * o fix: syntax highlighting follows the Dark/Light~ shax                            2h
+ * o Notifications inbox: decide enrichment strategy  omaghy                          3h
+ * o Stabilize `let_chains` in the 2024 edition       rust-lang/rust                  5h
+ * D RFC: unifying the plugin manifest across shell ~ ~/an-equally-long-r~            6h
+
+
+ j / k move  Enter toggle read  ? help
+
+── stale ──
+ Notifications - 8 unread · 8 total                                    t cached & ShaxP
+>* o Add SocketServer reconnect backoff and idle tim~ ~/quickshell                    4m
+ * o Short one                                        ~/an-equally-long-r~            9m
+ * o Bar widget plugins should be able to declare a ~ basecamp/omarchy               22m
+ * W CI failed on main                                shax                           41m
+ * o fix: syntax highlighting follows the Dark/Light~ shax                            2h
+ * o Notifications inbox: decide enrichment strategy  omaghy                          3h
+ * o Stabilize `let_chains` in the 2024 edition       rust-lang/rust                  5h
+ * D RFC: unifying the plugin manifest across shell ~ ~/an-equally-long-r~            6h
+
+
+ j / k move  Enter toggle read  ? help
+
+── refreshing ──
+ Notifications - 8 unread · 8 total                       | refreshing t cached & ShaxP
+>* o Add SocketServer reconnect backoff and idle tim~ ~/quickshell                    4m
+ * o Short one                                        ~/an-equally-long-r~            9m
+ * o Bar widget plugins should be able to declare a ~ basecamp/omarchy               22m
+ * W CI failed on main                                shax                           41m
+ * o fix: syntax highlighting follows the Dark/Light~ shax                            2h
+ * o Notifications inbox: decide enrichment strategy  omaghy                          3h
+ * o Stabilize `let_chains` in the 2024 edition       rust-lang/rust                  5h
+ * D RFC: unifying the plugin manifest across shell ~ ~/an-equally-long-r~            6h
+
+
+ j / k move  Enter toggle read  ? help
+
+── empty ──
+ Notifications - 0 unread · 0 total                                             & ShaxP
+
+
+                                    =  All caught up
+
+                          No notification needs your attention.
+
+                                     r  check again
+
+
+
+ j / k move  Enter toggle read  ? help
+
+── filtered-empty ──
+ Notifications - 0 unread · 0 total                                             & ShaxP
+
+
+                                      F  No matches
+
+                            Nothing here matches unread only.
+
+                                  Esc  clear the filter
+
+
+
+ j / k move  Enter toggle read  ? help
+
+── offline-with-cache ──
+ Notifications - 8 unread · 8 total                                             & ShaxP
+ 0 Offline - showing cached data.
+>* o Add SocketServer reconnect backoff and idle tim~ ~/quickshell                    4m
+ * o Short one                                        ~/an-equally-long-r~            9m
+ * o Bar widget plugins should be able to declare a ~ basecamp/omarchy               22m
+ * W CI failed on main                                shax                           41m
+ * o fix: syntax highlighting follows the Dark/Light~ shax                            2h
+ * o Notifications inbox: decide enrichment strategy  omaghy                          3h
+ * o Stabilize `let_chains` in the 2024 edition       rust-lang/rust                  5h
+ * D RFC: unifying the plugin manifest across shell ~ ~/an-equally-long-r~            6h
+
+ j / k move  Enter toggle read  ? help
+
+── offline-without-cache ──
+ Notifications - 0 unread · 0 total                               0 not fetched & ShaxP
+
+
+                             0  Offline, and nothing cached
+
+             GitHub is unreachable and this surface has never been fetched.
+
+                                        r  retry
+
+
+
+ j / k move  Enter toggle read  ? help
+
+── rate-limited ──
+ Notifications - 8 unread · 8 total                                             & ShaxP
+
+
+                              T  GitHub rate limit reached
+
+                   Resets at 12:00 UTC. Cached data is still readable.
+
+                                        r  retry
+
+
+
+ j / k move  Enter toggle read  ? help
+
+── forbidden ──
+ Notifications - 8 unread · 8 total                                             & ShaxP
+
+
+
+                                      /  No access
+
+                 You do not have access to this. It will not be retried.
+
+
+
+
+ j / k move  Enter toggle read  ? help
+
+── error ──
+ Notifications - 8 unread · 8 total                                             & ShaxP
+
+
+                                   X  Something failed
+
+                            GitHub returned 502: bad gateway
+
+                                        r  retry
+
+
+
+ j / k move  Enter toggle read  ? help
