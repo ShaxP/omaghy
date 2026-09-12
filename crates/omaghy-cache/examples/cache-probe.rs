@@ -43,9 +43,7 @@ fn main() {
     // This is the line that makes a rebuild visible — after a version bump it
     // reads 0, and so does a fresh file, and so does another account's.
     let on_open = store
-        .with_cache_mut(|cache: &Cache| {
-            Ok(cache.notifications(&NotificationQuery::default())?.len())
-        })
+        .with_cache(|cache: &Cache| Ok(cache.notifications(&NotificationQuery::default())?.len()))
         .expect("a cache read");
 
     if let Err(e) = seed(&store, &login) {
@@ -153,7 +151,7 @@ fn seed(store: &SqliteStore, login: &str) -> omaghy_model::Result<()> {
     })
     .collect();
 
-    store.with_cache_mut(|cache: &Cache| {
+    store.with_cache(|cache: &Cache| {
         cache.put_notifications(&rows)?;
         // The inbox's freshness lives in list_meta, which is what makes the
         // read above say "fetched" rather than "never fetched".

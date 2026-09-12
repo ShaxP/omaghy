@@ -84,16 +84,16 @@ impl SqliteStore {
     /// `keeps_cached_content()` is false.
     pub fn open(path: impl AsRef<Path>, viewer: Viewer) -> Result<Self> {
         let cache = Cache::open(path, &viewer.login)?;
-        Ok(Self::with_cache(cache, viewer))
+        Ok(Self::around(cache, viewer))
     }
 
     /// A store over an in-memory database. Nothing survives the process.
     pub fn in_memory(viewer: Viewer) -> Result<Self> {
         let cache = Cache::in_memory(&viewer.login)?;
-        Ok(Self::with_cache(cache, viewer))
+        Ok(Self::around(cache, viewer))
     }
 
-    fn with_cache(cache: Cache, viewer: Viewer) -> Self {
+    fn around(cache: Cache, viewer: Viewer) -> Self {
         let (events, _) = broadcast::channel(EVENT_CAPACITY);
         Self {
             viewer,
@@ -131,7 +131,7 @@ impl SqliteStore {
     /// does anyone call [`Self::refresh_finished`]. Deliberately a closure
     /// rather than a `&Cache` getter, so the lock cannot be held across an
     /// await by accident.
-    pub fn with_cache_mut<R>(
+    pub fn with_cache<R>(
         &self,
         f: impl FnOnce(&Cache) -> std::result::Result<R, omaghy_model::CacheError>,
     ) -> Result<R> {

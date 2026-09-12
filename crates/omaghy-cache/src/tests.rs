@@ -211,7 +211,7 @@ async fn a_mutation_by_one_viewer_does_not_touch_the_other() {
     let theirs = SqliteStore::open(tmp.db(), Viewer::new("octocat")).unwrap();
 
     for s in [&mine, &theirs] {
-        s.with_cache_mut(|c| c.put_notifications(&[notification("42", true, 1)]))
+        s.with_cache(|c| c.put_notifications(&[notification("42", true, 1)]))
             .unwrap();
     }
 
@@ -698,7 +698,7 @@ async fn a_cold_cache_is_never_fetched_not_empty() {
 async fn fetched_and_empty_is_not_a_cold_cache() {
     // "All caught up" and "we have never looked" are different screens.
     let s = store("ShaxP");
-    s.with_cache_mut(|c| c.put_list(INBOX, &[], &ListMeta::complete_at(NOW)))
+    s.with_cache(|c| c.put_list(INBOX, &[], &ListMeta::complete_at(NOW)))
         .unwrap();
     let got = s
         .notifications(&NotificationQuery::default())
@@ -712,7 +712,7 @@ async fn fetched_and_empty_is_not_a_cold_cache() {
 #[tokio::test]
 async fn notification_staleness_follows_the_poll_interval_floored_at_a_minute() {
     let s = store("ShaxP");
-    s.with_cache_mut(|c| {
+    s.with_cache(|c| {
         c.put_notifications(&[notification("1", true, 1)])?;
         c.put_list(
             INBOX,
@@ -731,7 +731,7 @@ async fn notification_staleness_follows_the_poll_interval_floored_at_a_minute() 
     assert!(!got.value.is_empty(), "stale data is never hidden");
 
     // GitHub says poll every five minutes: obey it, and 90s is fresh.
-    s.with_cache_mut(|c| c.set_poll_interval(Duration::seconds(300)))
+    s.with_cache(|c| c.set_poll_interval(Duration::seconds(300)))
         .unwrap();
     let got = s
         .notifications(&NotificationQuery::default())
@@ -770,7 +770,7 @@ async fn the_dashboard_is_only_as_fresh_as_its_stalest_section() {
 
     // One section fresh, the other never fetched — the screen is stale, since
     // the zero it is showing for the second section is a claim, not a gap.
-    s.with_cache_mut(|c| {
+    s.with_cache(|c| {
         c.put_list(
             &dashboard_list_key(&cfg.sections[0].query),
             &[NodeId("PR_1".into()), NodeId("PR_2".into())],
@@ -783,7 +783,7 @@ async fn the_dashboard_is_only_as_fresh_as_its_stalest_section() {
     assert!(got.stale);
 
     // Both fetched, one an hour ago: still stale, at the older time.
-    s.with_cache_mut(|c| {
+    s.with_cache(|c| {
         c.put_list(
             &dashboard_list_key(&cfg.sections[1].query),
             &[NodeId("PR_3".into())],
@@ -796,7 +796,7 @@ async fn the_dashboard_is_only_as_fresh_as_its_stalest_section() {
     assert!(got.stale);
 
     // Both recent: fresh.
-    s.with_cache_mut(|c| {
+    s.with_cache(|c| {
         c.put_list(
             &dashboard_list_key(&cfg.sections[1].query),
             &[NodeId("PR_3".into())],
@@ -812,7 +812,7 @@ async fn the_dashboard_is_only_as_fresh_as_its_stalest_section() {
 #[tokio::test]
 async fn a_read_reports_a_refresh_in_flight_without_hiding_content() {
     let s = store("ShaxP");
-    s.with_cache_mut(|c| {
+    s.with_cache(|c| {
         c.put_notifications(&[notification("1", true, 1)])?;
         c.put_list(INBOX, &[], &ListMeta::complete_at(NOW))
     })
@@ -842,7 +842,7 @@ async fn the_limit_narrows_the_page_but_not_the_total() {
     let rows: Vec<Notification> = (0..10)
         .map(|i| notification(&format!("{i}"), true, i))
         .collect();
-    s.with_cache_mut(|c| c.put_notifications(&rows)).unwrap();
+    s.with_cache(|c| c.put_notifications(&rows)).unwrap();
 
     let got = s
         .notifications(&NotificationQuery {
@@ -917,7 +917,7 @@ async fn a_failed_refresh_clears_the_flight_and_names_the_target() {
 async fn events_name_what_changed_and_carry_none_of_it() {
     // Carrying payloads means two paths into UI state and they diverge.
     let s = store("ShaxP");
-    s.with_cache_mut(|c| c.put_notifications(&[notification("1", true, 1)]))
+    s.with_cache(|c| c.put_notifications(&[notification("1", true, 1)]))
         .unwrap();
     let mut rx = s.subscribe();
     s.mark_read(&[NotificationId("1".into())]).await.unwrap();
@@ -932,7 +932,7 @@ async fn events_name_what_changed_and_carry_none_of_it() {
 #[tokio::test]
 async fn a_mark_read_lands_locally_before_anything_is_sent() {
     let s = store("ShaxP");
-    s.with_cache_mut(|c| c.put_notifications(&[notification("1", true, 1)]))
+    s.with_cache(|c| c.put_notifications(&[notification("1", true, 1)]))
         .unwrap();
 
     s.mark_read(&[NotificationId("1".into())]).await.unwrap();
@@ -958,7 +958,7 @@ async fn a_mark_read_lands_locally_before_anything_is_sent() {
 #[tokio::test]
 async fn marking_an_already_read_thread_is_not_an_error() {
     let s = store("ShaxP");
-    s.with_cache_mut(|c| c.put_notifications(&[notification("1", false, 1)]))
+    s.with_cache(|c| c.put_notifications(&[notification("1", false, 1)]))
         .unwrap();
     s.mark_read(&[NotificationId("1".into())]).await.unwrap();
     s.mark_read(&[NotificationId("1".into())]).await.unwrap();
@@ -969,7 +969,7 @@ async fn marking_an_already_read_thread_is_not_an_error() {
 #[tokio::test]
 async fn a_failed_mutation_rolls_back_to_the_value_captured_first() {
     let s = store("ShaxP").with_remote(Arc::new(FailingRemote(StoreError::Forbidden)));
-    s.with_cache_mut(|c| {
+    s.with_cache(|c| {
         c.put_notifications(&[
             notification("unread-1", true, 1),
             notification("already-read", false, 2),
@@ -1031,7 +1031,7 @@ async fn a_rejected_token_still_leaves_the_cache_readable() {
     let s = store("ShaxP").with_remote(Arc::new(FailingRemote(StoreError::Auth(
         AuthError::Rejected,
     ))));
-    s.with_cache_mut(|c| c.put_notifications(&[notification("1", true, 1)]))
+    s.with_cache(|c| c.put_notifications(&[notification("1", true, 1)]))
         .unwrap();
     let err = s
         .mark_read(&[NotificationId("1".into())])
