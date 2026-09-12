@@ -419,48 +419,61 @@ impl<'a> StateView<'a> {
 
     /// The centred block every non-content state uses, so they look alike.
     fn message(&self, f: &mut Frame, area: Rect, icon: Icon, role: Role, copy: &EmptyCopy<'_>) {
-        let EmptyCopy {
-            headline,
-            detail,
-            action,
-        } = *copy;
-        let mut lines = vec![
+        notice(f, area, self.icons, icon, role, copy);
+    }
+}
+
+/// The centred glyph-headline-detail-action block, in one place so that every
+/// screen without rows looks like every other one.
+pub fn notice(
+    f: &mut Frame,
+    area: Rect,
+    icons: Icons,
+    icon: Icon,
+    role: Role,
+    copy: &EmptyCopy<'_>,
+) {
+    let EmptyCopy {
+        headline,
+        detail,
+        action,
+    } = *copy;
+    let mut lines = vec![
+        Line::from(vec![
+            Span::styled(icons.get(icon).to_owned(), role.style()),
+            Span::raw("  "),
+            Span::styled(
+                headline.to_owned(),
+                Role::Default.style().add_modifier(Modifier::BOLD),
+            ),
+        ])
+        .alignment(Alignment::Center),
+        Line::raw(""),
+        Line::styled(detail.to_owned(), Role::Muted.style()).alignment(Alignment::Center),
+    ];
+    if let Some((key, what)) = action {
+        lines.push(Line::raw(""));
+        lines.push(
             Line::from(vec![
-                Span::styled(self.icons.get(icon).to_owned(), role.style()),
-                Span::raw("  "),
                 Span::styled(
-                    headline.to_owned(),
-                    Role::Default.style().add_modifier(Modifier::BOLD),
+                    key.to_owned(),
+                    Role::Accent.style().add_modifier(Modifier::BOLD),
                 ),
+                Span::raw("  "),
+                Span::styled(what.to_owned(), Role::Muted.style()),
             ])
             .alignment(Alignment::Center),
-            Line::raw(""),
-            Line::styled(detail.to_owned(), Role::Muted.style()).alignment(Alignment::Center),
-        ];
-        if let Some((key, what)) = action {
-            lines.push(Line::raw(""));
-            lines.push(
-                Line::from(vec![
-                    Span::styled(
-                        key.to_owned(),
-                        Role::Accent.style().add_modifier(Modifier::BOLD),
-                    ),
-                    Span::raw("  "),
-                    Span::styled(what.to_owned(), Role::Muted.style()),
-                ])
-                .alignment(Alignment::Center),
-            );
-        }
-        let h = lines.len() as u16;
-        let y = area.y + area.height.saturating_sub(h) / 2;
-        let centred = Rect {
-            x: area.x,
-            y,
-            width: area.width,
-            height: h.min(area.height),
-        };
-        f.render_widget(Paragraph::new(Text::from(lines)), centred);
+        );
     }
+    let h = lines.len() as u16;
+    let y = area.y + area.height.saturating_sub(h) / 2;
+    let centred = Rect {
+        x: area.x,
+        y,
+        width: area.width,
+        height: h.min(area.height),
+    };
+    f.render_widget(Paragraph::new(Text::from(lines)), centred);
 }
 
 /// An empty state says *why*, and what to do next.
@@ -470,13 +483,21 @@ impl<'a> StateView<'a> {
 /// the reason for the empty screen is classified centrally rather than
 /// chosen at the call site. Removed when the surfaces land in Wave 2.
 pub fn empty_state(f: &mut Frame, area: Rect, headline: &str, detail: &str) {
-    StateView::new(&SurfaceState::Empty)
-        .empty(EmptyCopy {
+    // Informational rather than [`SurfaceState::Empty`]: the shell's stub
+    // surfaces use this to say "not implemented yet", and a green tick is
+    // the wrong thing to put beside that.
+    notice(
+        f,
+        area,
+        Icons::UNICODE,
+        Icon::Info,
+        Role::Muted,
+        &EmptyCopy {
             headline,
             detail,
             action: None,
-        })
-        .render(f, area);
+        },
+    );
 }
 
 #[cfg(test)]

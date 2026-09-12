@@ -29,7 +29,9 @@ pub use chrome::{Footer, Freshness, Header, footer, header};
 pub use help::{Help, HelpOutcome, HelpSection};
 pub use list::{Cell, Column, Columns, Row, RowList, elide, elide_owner, row_line, shared_repo};
 pub use palette::{Match, Palette, PaletteOutcome, fuzzy, unreachable_by_name};
-pub use state::{Body, Conditions, EmptyCopy, StateView, SurfaceState, classify, empty_state};
+pub use state::{
+    Body, Conditions, EmptyCopy, StateView, SurfaceState, classify, empty_state, notice,
+};
 pub use toast::{Level, Toast};
 
 #[cfg(test)]
