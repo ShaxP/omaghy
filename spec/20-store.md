@@ -91,12 +91,13 @@ SQLite via `rusqlite`, at `$XDG_CACHE_HOME/omaghy/cache.db`. WAL mode, so
 
 ```sql
 CREATE TABLE entities (
-  node_id    TEXT NOT NULL,
-  viewer     TEXT NOT NULL,          -- §3.1
-  kind       TEXT NOT NULL,          -- 'pr' | 'issue' | 'repo' | …
-  body       BLOB NOT NULL,          -- serialized omaghy-model type
-  etag       TEXT,
-  fetched_at INTEGER NOT NULL,
+  node_id       TEXT NOT NULL,
+  viewer        TEXT NOT NULL,       -- §3.1
+  kind          TEXT NOT NULL,       -- 'pr' | 'issue' | 'repo' | …
+  body          BLOB NOT NULL,       -- serialized omaghy-model type
+  etag          TEXT,
+  last_modified TEXT,
+  fetched_at    INTEGER NOT NULL,
   PRIMARY KEY (node_id, viewer)
 );
 
@@ -109,7 +110,7 @@ CREATE TABLE list_items (
 );
 CREATE TABLE list_meta (
   list_key TEXT NOT NULL, viewer TEXT NOT NULL,
-  etag TEXT, cursor TEXT, complete INTEGER NOT NULL,
+  etag TEXT, last_modified TEXT, cursor TEXT, complete INTEGER NOT NULL,
   fetched_at INTEGER NOT NULL,
   PRIMARY KEY (list_key, viewer)
 );
@@ -120,12 +121,40 @@ CREATE TABLE notifications (        -- REST id space, own table
   updated_at INTEGER NOT NULL, enrichment TEXT NOT NULL,
   PRIMARY KEY (id, viewer)
 );
+CREATE INDEX notifications_by_viewer_updated
+  ON notifications (viewer, updated_at DESC);
 
-CREATE TABLE kv (k TEXT PRIMARY KEY, v BLOB NOT NULL);  -- rate limit, poll interval, last-modified
+CREATE TABLE kv (                   -- rate limit, poll interval
+  k TEXT NOT NULL, viewer TEXT NOT NULL, v BLOB NOT NULL,
+  PRIMARY KEY (k, viewer)
+);
 ```
 
 Bodies are serialized `omaghy-model` types, not raw API JSON — translation
-happens once, at the `omaghy-api` boundary, not on every cache read.
+happens once, at the `omaghy-api` boundary, not on every cache read. That makes
+the model part of the schema: a model change bumps `user_version` (§3.2) even
+when the SQL is untouched.
+
+Three columns above were added in W1.2, where the schema was first compiled:
+
+- **`last_modified` on `entities` and `list_meta`.** §4 requires both
+  validators stored beside the data; the original DDL had only `etag`, leaving
+  nowhere to put the one notifications actually use.
+- **`viewer` on `kv`.** §3.1 says *every* table carries it, and the values `kv`
+  holds — rate-limit budget, poll interval — belong to a token, not a machine.
+  A single-keyed `kv` lets one account's exhausted budget throttle another's.
+- **An index on `(viewer, updated_at)`**, because every read of that table is
+  "this viewer's inbox, newest first".
+
+`unread`, `updated_at` and `enrichment` are denormalized out of the
+notification body so the inbox can be filtered and sorted, and so "which rows
+still want enriching" is one query rather than a deserialize of every row. The
+**column is authoritative for read state**: a body serialized before a
+`mark_read` would otherwise resurrect the old value on the next read.
+
+Notifications have their own table but still need the *list* metadata every
+other collection has — freshness and the `Last-Modified` validator. Those live
+in `list_meta` under the key `notifications`, rather than in a second home.
 
 ### 3.1 Viewer keying is not optional
 
@@ -138,6 +167,14 @@ failing.
 
 A `user_version` pragma. **On mismatch, delete the database and rebuild.** It
 is a cache; migrations would be effort spent protecting data we can re-fetch.
+A mismatch is not an error — the caller gets a working, empty database.
+
+A file that is not a database is different, and is **reported** as
+`CacheError::Corrupt` as well as rebuilt. `StoreError::keeps_cached_content()`
+names that as the one error for which the UI must drop what it is holding, so
+swallowing it would leave rows on screen that no longer have a source. The
+rebuild still happens on the way out, so corruption is one bad read rather
+than a permanently broken install.
 
 ---
 
@@ -224,8 +261,15 @@ naming the cause. `Forbidden` on an enriched notification is recorded as
 
 Two implementations ship, and the TUI cannot tell them apart:
 
-- **`SqliteStore`** — the real one. Tested against recorded HTTP fixtures; no
-  test opens a socket.
+- **`SqliteStore`** — the real one, in `omaghy-cache`. It owns the cache, the
+  freshness policy, the events, and the optimistic half of every mutation. It
+  does **not** make HTTP requests: `omaghy-api` depends on `omaghy-cache`, not
+  the reverse (`CONTRIBUTING.md`), so the dependency is inverted — the store is
+  handed a `Remote` that schedules fetches and delivers mutations, and
+  `omaghy-sync` implements it with `omaghy-api` behind it at M1 integration.
+  Nothing in `omaghy-cache` knows how to open a socket, which is how "no test
+  opens a socket" is enforced rather than merely intended. The fixtures that
+  drive the fetch half are `omaghy-api`'s.
 - **`FakeStore`** — backed by `fake::corpus()`, with a `Behaviour` struct
   toggling staleness, emptiness, cold cache, in-flight refresh, and read/write
   failure injection. This is what surface agents build against, and what

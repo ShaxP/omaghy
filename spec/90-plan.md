@@ -50,6 +50,12 @@ they own.
 An agent needing a dependency P0.2 did not anticipate files a contract-change
 request (§5). It does not add one.
 
+One correction from W1.2: taking a declared dependency is a one-line change to
+the agent's own manifest, but it is **not** confined to it. `Cargo.lock` records
+the edge, so the lockfile changes too — one line, inside that crate's own
+stanza, with no version resolution moving. Expect it in the diff, and read it
+rather than assuming the agent added something.
+
 ### 2.2 Pre-wire the registry
 
 Surfaces register (`30-ui.md` §3), and registration happens in one file. If
