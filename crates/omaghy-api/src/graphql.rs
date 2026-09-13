@@ -122,6 +122,69 @@ pub fn decode<T: DeserializeOwned>(body: &[u8], now: OffsetDateTime) -> Result<T
     })
 }
 
+/// A response that kept both halves.
+///
+/// See [`decode_partial`] for when this is the right answer and [`decode`] for
+/// when it is not.
+#[derive(Debug, Clone)]
+pub struct Partial<T> {
+    pub data: Option<T>,
+    pub errors: Vec<GraphQlError>,
+}
+
+impl<T> Partial<T> {
+    /// GitHub's message for one aliased field, if that field failed.
+    ///
+    /// An error's `path` names the field it belongs to — verified live, a
+    /// missing repository under alias `s3` arrives as `path: ["s3"]` and a
+    /// missing number under it as `path: ["s3", "issueOrPullRequest"]`. The
+    /// first segment is therefore the alias in both cases.
+    pub fn message_for(&self, alias: &str) -> Option<String> {
+        self.errors
+            .iter()
+            .find(|e| e.path.first().and_then(Value::as_str) == Some(alias))
+            .map(|e| e.message.clone())
+    }
+}
+
+/// Decode a GraphQL response **keeping per-field errors**.
+///
+/// This is the exception to [`decode`]'s rule, and it exists for exactly one
+/// shape: a query that asks fifty independent questions under fifty aliases.
+/// There, an error is information *about one alias* — verified against the
+/// live API, a batch naming one repository we cannot see answers HTTP 200 with
+/// the other forty-nine resolved and a single `NOT_FOUND` pointing at the one.
+/// Failing the batch would throw away forty-nine good answers to report one
+/// permanent failure, and the caller would fetch them all again on the next
+/// open.
+///
+/// It is still a failure when `data` is absent: a rate limit, an unparseable
+/// query and an expired token all arrive that way, and none of them is news
+/// about a particular field.
+pub fn decode_partial<T: DeserializeOwned>(
+    body: &[u8],
+    now: OffsetDateTime,
+) -> Result<Partial<T>, StoreError> {
+    let envelope: Envelope<T> = serde_json::from_slice(body).map_err(|e| StoreError::Upstream {
+        status: 200,
+        message: format!("GraphQL response was not understood: {e}"),
+    })?;
+
+    match envelope.data {
+        Some(data) => Ok(Partial {
+            data: Some(data),
+            errors: envelope.errors,
+        }),
+        None => Err(match envelope.errors.first() {
+            Some(first) => map_graphql_error(first, &envelope.errors, now),
+            None => StoreError::Upstream {
+                status: 200,
+                message: "GraphQL returned neither data nor errors".to_owned(),
+            },
+        }),
+    }
+}
+
 fn map_graphql_error(
     first: &GraphQlError,
     all: &[GraphQlError],
@@ -229,6 +292,45 @@ mod tests {
             decode::<Value>(body, NOW).is_err(),
             "a silently missing section is worse than an error"
         );
+    }
+
+    #[test]
+    fn a_batch_keeps_the_answers_it_did_get() {
+        // The exact body recorded from the live API: three aliases resolved,
+        // one repository that does not exist. Failing the whole thing would
+        // throw away three good answers and re-fetch them on the next open.
+        let body = br#"{"data":{"s0":{"n":1},"s1":{"n":2},"s2":{"n":3},"s3":null},
+            "errors":[{"type":"NOT_FOUND","path":["s3"],
+                       "message":"Could not resolve to a Repository with the name 'o/r'."}]}"#;
+        let partial: Partial<Value> = decode_partial(body, NOW).unwrap();
+        assert_eq!(partial.data.as_ref().unwrap()["s0"]["n"], 1);
+        assert!(
+            partial.message_for("s3").unwrap().contains("Could not"),
+            "the failed alias is nameable, so one row can be marked Failed"
+        );
+        assert_eq!(partial.message_for("s0"), None);
+    }
+
+    #[test]
+    fn an_error_deeper_than_the_alias_still_names_the_alias() {
+        // Recorded: a number that does not exist inside a repository that
+        // does. GitHub points at the field, not at the alias.
+        let body = br#"{"data":{"s3":{"issueOrPullRequest":null}},
+            "errors":[{"type":"NOT_FOUND","path":["s3","issueOrPullRequest"],
+                       "message":"Could not resolve to an issue or pull request with the number of 999999."}]}"#;
+        let partial: Partial<Value> = decode_partial(body, NOW).unwrap();
+        assert!(partial.message_for("s3").unwrap().contains("999999"));
+    }
+
+    #[test]
+    fn a_batch_with_no_data_at_all_is_still_a_failure() {
+        // A rate limit, a bad token and an unparseable query all arrive this
+        // way, and none of them is news about one alias.
+        let body = br#"{"data":null,"errors":[{"type":"RATE_LIMITED","message":"exceeded"}]}"#;
+        assert!(matches!(
+            decode_partial::<Value>(body, NOW).unwrap_err(),
+            StoreError::RateLimited { .. }
+        ));
     }
 
     #[test]
