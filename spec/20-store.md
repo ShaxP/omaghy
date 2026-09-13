@@ -204,12 +204,25 @@ GitHub offers it. A 304 costs no REST rate limit, so aggressive polling stays
 cheap. Store the validator beside the data and always send it.
 
 Measured in W1.1, against the live API: `GET /notifications` returns an `ETag`
-and **no `Last-Modified`** — an earlier draft of this section had it the other
-way round. `omaghy-api` stores and sends both, because other endpoints do send
-`Last-Modified` and a validator we hold but do not send is worthless. The 304
-claim is confirmed: `X-RateLimit-Used` was identical across the recorded
-200/304 pair, and the pair is committed as
-`crates/omaghy-api/tests/cassettes/notifications_conditional.json`.
+and no `Last-Modified`. **Corrected in W2.1: it does send `Last-Modified`.**
+W1.1 measured an *empty* inbox, which has no most-recently-modified thread to
+report one from; against an inbox with contents the header is there. Both
+recordings are committed — `notifications_conditional.json` is the empty case
+and `notifications_page.json` the populated one — because the difference is
+exactly the kind that would otherwise be rediscovered as a bug.
+
+`omaghy-api` stores and sends both validators regardless. The 304 claim is
+confirmed twice over: `X-RateLimit-Used` is identical across both recorded
+200/304 pairs.
+
+One more thing the populated recording shows, and it is a trap worth naming:
+the 200 carries a **weak** ETag (`W/"…"`) and the matching 304 echoes the
+**strong** form of the same value. Since a 304's validators are kept in
+preference to the held ones (§4, `Validators::merged_with`), the stored ETag
+silently changes form after the first poll. Verified against the live API that
+GitHub answers 304 to either form, so this is harmless — but a client that
+assumed the validator it stored is the validator it sent would have found out
+the expensive way.
 
 ---
 
@@ -227,7 +240,23 @@ flight mutations are tracked so a refresh landing mid-flight does not resurrect
 the old state — the pending change wins until it resolves.
 
 Every mutation is idempotent where GitHub allows it; `mark_read` on an
-already-read thread must not error.
+already-read thread must not error. Confirmed in W2.1 and recorded as
+`notifications_mark_read.json`: `PATCH /notifications/threads/{id}` answers
+`205 Reset Content` whether or not the thread was already read.
+
+**`mark_unread` has no remote counterpart, and this section assumed it did.**
+GitHub's REST API offers exactly two thread verbs — `PATCH` (read) and `DELETE`
+(done) — and no way back. Verified rather than inferred: a `PATCH` carrying
+`{"unread": true}` answers `205` and leaves the thread read. So `mark_unread`
+is a **local** state change. The optimistic write of step 1 is the whole of the
+effect, there is nothing to reconcile in step 3, and the next poll will
+overwrite it with GitHub's answer. `omaghy_api::Notifications::mark_unread`
+therefore sends nothing and returns `Ok`, which is the honest shape rather than
+a fabricated request.
+
+This is worth knowing before a surface offers the action: `30-ui.md` §9 says
+`u` *filters* to unread rather than setting it, which happens to be the only
+behaviour GitHub can support.
 
 ---
 
@@ -236,6 +265,14 @@ already-read thread must not error.
 **GraphQL is points-based** (5000/hr; a combined dashboard query measured at
 **1 point**), **REST is requests-based** (5000/hr, 304s free). Track both
 independently from response headers in `kv`.
+
+W2.1 measured the second batched query this design depends on: enriching a
+whole page of notifications — one aliased `repository` selection per subject,
+each with two single-node connections — also costs **1 point**. Points are
+charged for requested *nodes*, so the aliases are nearly free and the
+connections are what would not be: a `contexts(first: 100)` per subject to get
+per-check counts would cost fifty times as much, which is why `CheckRollup` in
+an inbox row carries GitHub's aggregate verdict and no counts.
 
 Both arrive through the *same* `X-RateLimit-*` headers, distinguished by
 **`X-RateLimit-Resource`** (`core` or `graphql`) — W1.1. A response naming any
