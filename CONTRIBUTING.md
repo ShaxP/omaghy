@@ -40,7 +40,8 @@ git push --force-with-lease
 ```
 
 Merging the parent with a merge commit avoids this entirely — which is most of
-why merge commits are allowed.
+why merge commits are allowed. Note this is separate from being *behind*
+`main`, which no longer blocks a merge (see CI below).
 
 ## Every PR carries a smoke test
 
@@ -104,6 +105,37 @@ A good checklist:
 
 Spec- and docs-only PRs use a **Review guide** instead: where to look and which
 decision to check. Point at what is worth arguing with, not at the whole diff.
+
+## CI
+
+`build · clippy · test` is a required check and runs `cargo fmt --check`,
+`cargo clippy --all-targets`, `cargo test`, and `cargo build` — all with
+`-D warnings`.
+
+Run it locally before pushing. An agent that cannot run `cargo test` burns CI
+cycles discovering typos.
+
+**Branches need not be up to date with `main` before merging.** That rule was
+on, and cost a rebase and a CI re-run on every other open PR each time one
+merged — four of them in a single wave of three agents, each force-push
+invalidating a review already in progress. It scales as the square of the
+number of open PRs. GitHub's merge queue would give the guarantee without the
+friction, but it is unavailable on this repository.
+
+### What replaces it
+
+**A PR that touches `omaghy-model` or `omaghy-store` merges alone**, with
+nothing else in flight.
+
+This aims at where the risk actually is. Two PRs that are each green can still
+break `main` together — not through a textual conflict, which git catches, but
+semantically: one renames a function while another adds a caller, one tightens
+a lint while another violates it. With one agent per crate, ordinary PRs cannot
+do this to each other, because they share no code. The only route is a change
+to a shared contract, and those already arrive as their own PR.
+
+CI also runs on push to `main`, so a bad combination surfaces within minutes,
+on a branch nobody has built on, and a merge commit reverts with one command.
 
 ## Dependencies
 
