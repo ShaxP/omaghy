@@ -16,6 +16,7 @@ use ratatui::{
     text::{Line, Span},
     widgets::{List, ListItem, ListState},
 };
+use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
 /// Cells before the first column: the cursor, the unread marker, a space.
 const GUTTER: u16 = 3;
@@ -216,15 +217,37 @@ pub fn elide_owner<'a>(repo: &'a str, viewer: Option<&str>) -> &'a str {
     }
 }
 
+/// Display width in terminal cells.
+///
+/// Not `chars().count()`: a CJK ideograph or a wide emoji occupies two cells,
+/// a combining mark none. Counting characters misaligns every column to the
+/// right of such a title — and GitHub titles contain both.
+pub fn cells(s: &str) -> usize {
+    UnicodeWidthStr::width(s)
+}
+
 /// Truncate to `width` cells, marking the cut with a one-cell ellipsis.
+///
+/// A wide character straddling the boundary is dropped rather than half-drawn:
+/// there is no half cell to put it in.
 pub fn elide(s: &str, width: usize, icons: Icons) -> String {
     if width == 0 {
         return String::new();
     }
-    if s.chars().count() <= width {
+    if cells(s) <= width {
         return s.to_owned();
     }
-    let mut out: String = s.chars().take(width.saturating_sub(1)).collect();
+    let budget = width.saturating_sub(cells(icons.ellipsis()));
+    let mut out = String::new();
+    let mut used = 0usize;
+    for c in s.chars() {
+        let w = UnicodeWidthChar::width(c).unwrap_or(0);
+        if used + w > budget {
+            break;
+        }
+        out.push(c);
+        used += w;
+    }
     out.push_str(icons.ellipsis());
     out
 }
@@ -232,8 +255,7 @@ pub fn elide(s: &str, width: usize, icons: Icons) -> String {
 /// Pad or elide to exactly `width` cells, left-aligned.
 fn fit(s: &str, width: usize, icons: Icons) -> String {
     let mut out = elide(s, width, icons);
-    let len = out.chars().count();
-    out.extend(std::iter::repeat_n(' ', width.saturating_sub(len)));
+    out.extend(std::iter::repeat_n(' ', width.saturating_sub(cells(&out))));
     out
 }
 
@@ -241,15 +263,14 @@ fn fit(s: &str, width: usize, icons: Icons) -> String {
 /// right-aligned so the unit letters line up and scan as one column.
 fn fit_right(s: &str, width: usize, icons: Icons) -> String {
     let cut = elide(s, width, icons);
-    let len = cut.chars().count();
-    let mut out: String = std::iter::repeat_n(' ', width.saturating_sub(len)).collect();
+    let mut out: String = std::iter::repeat_n(' ', width.saturating_sub(cells(&cut))).collect();
     out.push_str(&cut);
     out
 }
 
 /// `owner/name` in a narrow column: keep the name, lose the owner first.
 fn fit_repo(repo: &str, width: usize, icons: Icons) -> String {
-    if repo.chars().count() <= width {
+    if cells(repo) <= width {
         return fit(repo, width, icons);
     }
     // The name is what distinguishes two rows; the owner usually repeats, so
@@ -681,5 +702,42 @@ mod tests {
     fn the_age_is_right_aligned_so_the_units_line_up() {
         assert_eq!(fit_right("4m", 4, Icons::UNICODE), "  4m");
         assert_eq!(fit_right("14mo", 4, Icons::UNICODE), "14mo");
+    }
+    #[test]
+    fn width_is_measured_in_cells_not_characters() {
+        let icons = Icons::new(crate::theme::IconMode::Unicode);
+
+        // A CJK ideograph is two cells wide. Counting characters would call
+        // this string 4 wide when it draws 8, pushing every column right of
+        // it out of alignment.
+        let cjk = "修复中文标题";
+        assert_eq!(cjk.chars().count(), 6);
+        assert_eq!(cells(cjk), 12);
+
+        // Fitting must produce exactly `width` cells, whatever the script.
+        for w in [4usize, 7, 12, 20] {
+            assert_eq!(cells(&fit(cjk, w, icons)), w, "fit to {w}");
+            assert_eq!(cells(&fit_right(cjk, w, icons)), w, "fit_right to {w}");
+        }
+    }
+
+    #[test]
+    fn a_wide_character_straddling_the_cut_is_dropped_not_halved() {
+        let icons = Icons::new(crate::theme::IconMode::Unicode);
+        // Budget after the ellipsis is 2 cells: one ideograph fits, the second
+        // would need a cell that does not exist.
+        let out = elide("中文字", 3, icons);
+        assert_eq!(cells(&out), 3, "never overflows the column");
+        assert!(out.ends_with(icons.ellipsis()));
+    }
+
+    #[test]
+    fn zero_width_marks_do_not_consume_a_cell() {
+        let icons = Icons::new(crate::theme::IconMode::Unicode);
+        // "e" + combining acute renders in one cell.
+        let combining = "e\u{0301}fg";
+        assert_eq!(combining.chars().count(), 4);
+        assert_eq!(cells(combining), 3);
+        assert_eq!(cells(&fit(combining, 6, icons)), 6);
     }
 }

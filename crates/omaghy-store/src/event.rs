@@ -3,7 +3,7 @@
 //!
 //! See `spec/20-store.md` §1.
 
-use omaghy_model::{StoreError, SubjectRef};
+use omaghy_model::{LimitKind, StoreError, SubjectRef};
 use time::OffsetDateTime;
 
 /// Something refreshable. Used to schedule, to coalesce, and to cancel.
@@ -42,7 +42,12 @@ pub enum StoreEvent {
         target: RefreshTarget,
         error: StoreError,
     },
+    /// `kind` matters to the UI: a primary limit is "back at 14:05", a
+    /// secondary one is "slow down", and only the latter means a mutation must
+    /// not be retried. `StoreError::RateLimited` already carried it; the event
+    /// did not. Found by W1.1.
     RateLimited {
+        kind: LimitKind,
         until: OffsetDateTime,
     },
     AuthLost(omaghy_model::AuthError),
@@ -82,6 +87,7 @@ mod tests {
         assert!(e.is_global());
 
         let e = StoreEvent::RateLimited {
+            kind: LimitKind::Secondary,
             until: datetime!(2026-09-11 13:00 UTC),
         };
         assert!(e.is_global());
