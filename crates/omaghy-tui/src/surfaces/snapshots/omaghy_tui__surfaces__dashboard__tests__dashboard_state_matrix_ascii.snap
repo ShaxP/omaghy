@@ -1,0 +1,120 @@
+---
+source: crates/omaghy-tui/src/surfaces/dashboard.rs
+expression: "state_matrix(Icons::ASCII).await"
+---
+── cold · Dashboard  not fetched ──
+  ----------------------------------------------------------
+  ----------------------------------------
+  --------------------------------------------------------------------
+  ------------------------------------------------
+  -----------------------------------------------------
+  ----------------------------------------------------------
+  ----------------------------------------
+  --------------------------------------------------------------------
+  ------------------------------------------------
+  | Loading
+
+── populated · Dashboard  4 of 4 sections need you ──
+> * Needs my review                                                                    4
+  * My pull requests                                                                   4
+  * Assigned to me                                                                     4
+  * Recently mentioned                                                                 4
+
+ ? is:open is:pr review-requested:@me
+
+
+
+
+
+── populated · every section clear · Dashboard  0 of 4 sections need you ──
+> = Needs my review                                                              nothing
+  = My pull requests                                                             nothing
+  = Assigned to me                                                               nothing
+  = Recently mentioned                                                           nothing
+
+ = Nothing matches is:open is:pr review-requested:@me right now.
+
+
+
+
+
+── stale · Dashboard  4 of 4 sections need you · cached ──
+> * Needs my review                                                                    4
+  * My pull requests                                                                   4
+  * Assigned to me                                                                     4
+  * Recently mentioned                                                                 4
+
+ ? is:open is:pr review-requested:@me
+
+
+
+
+
+── refreshing · Dashboard  4 of 4 sections need you · cached ──
+> * Needs my review                                                                    4
+  * My pull requests                                                                   4
+  * Assigned to me                                                                     4
+  * Recently mentioned                                                                 4
+
+ ? is:open is:pr review-requested:@me
+
+
+
+
+
+── offline-with-cache · Dashboard  4 of 4 sections need you ──
+ 0 Offline - showing cached data.
+> * Needs my review                                                                    4
+  * My pull requests                                                                   4
+  * Assigned to me                                                                     4
+  * Recently mentioned                                                                 4
+
+ ? is:open is:pr review-requested:@me
+
+
+
+
+── offline-without-cache · Dashboard ──
+
+
+                             0  Offline, and nothing cached
+
+             GitHub is unreachable and this surface has never been fetched.
+
+                                      r  try again
+
+
+
+
+── rate-limited · Dashboard ──
+
+
+                              T  GitHub rate limit reached
+
+                   Resets at 12:00 UTC. Cached data is still readable.
+
+                                      r  try again
+
+
+
+
+── forbidden · Dashboard ──
+
+
+
+                                      /  No access
+
+                 You do not have access to this. It will not be retried.
+
+
+
+
+
+── error · Dashboard ──
+
+
+                                   X  Something failed
+
+                            GitHub returned 502: bad gateway
+
+                                      r  try again
