@@ -1,0 +1,161 @@
+---
+source: crates/omaghy-tui/src/surfaces/dashboard.rs
+expression: out
+---
+── 40 cols · unicode ──
+▸  Needs my review                    3
+   My pull requests                   7
+   Assigned to me               nothing
+   Recently mentioned                 1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 59 cols · unicode ──
+▸  Needs my review                                       3
+   My pull requests                                      7
+   Assigned to me                                  nothing
+   Recently mentioned                                    1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 60 cols · unicode ──
+▸  Needs my review                                        3
+   My pull requests                                       7
+   Assigned to me                                   nothing
+   Recently mentioned                                     1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 79 cols · unicode ──
+▸  Needs my review                                                           3
+   My pull requests                                                          7
+   Assigned to me                                                      nothing
+   Recently mentioned                                                        1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 80 cols · unicode ──
+▸  Needs my review                                                            3
+   My pull requests                                                           7
+   Assigned to me                                                       nothing
+   Recently mentioned                                                         1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 99 cols · unicode ──
+▸  Needs my review                                                                               3
+   My pull requests                                                                              7
+   Assigned to me                                                                          nothing
+   Recently mentioned                                                                            1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 100 cols · unicode ──
+▸  Needs my review                                                                                3
+   My pull requests                                                                               7
+   Assigned to me                                                                           nothing
+   Recently mentioned                                                                             1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 120 cols · unicode ──
+▸  Needs my review                                                                                                    3
+   My pull requests                                                                                                   7
+   Assigned to me                                                                                               nothing
+   Recently mentioned                                                                                                 1
+
+  is:open is:pr review-requested:@me
+
+
+
+── 40 cols · ascii ──
+> * Needs my review                    3
+  * My pull requests                   7
+  = Assigned to me               nothing
+  * Recently mentioned                 1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 59 cols · ascii ──
+> * Needs my review                                       3
+  * My pull requests                                      7
+  = Assigned to me                                  nothing
+  * Recently mentioned                                    1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 60 cols · ascii ──
+> * Needs my review                                        3
+  * My pull requests                                       7
+  = Assigned to me                                   nothing
+  * Recently mentioned                                     1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 79 cols · ascii ──
+> * Needs my review                                                           3
+  * My pull requests                                                          7
+  = Assigned to me                                                      nothing
+  * Recently mentioned                                                        1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 80 cols · ascii ──
+> * Needs my review                                                            3
+  * My pull requests                                                           7
+  = Assigned to me                                                       nothing
+  * Recently mentioned                                                         1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 99 cols · ascii ──
+> * Needs my review                                                                               3
+  * My pull requests                                                                              7
+  = Assigned to me                                                                          nothing
+  * Recently mentioned                                                                            1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 100 cols · ascii ──
+> * Needs my review                                                                                3
+  * My pull requests                                                                               7
+  = Assigned to me                                                                           nothing
+  * Recently mentioned                                                                             1
+
+ ? is:open is:pr review-requested:@me
+
+
+
+── 120 cols · ascii ──
+> * Needs my review                                                                                                    3
+  * My pull requests                                                                                                   7
+  = Assigned to me                                                                                               nothing
+  * Recently mentioned                                                                                                 1
+
+ ? is:open is:pr review-requested:@me

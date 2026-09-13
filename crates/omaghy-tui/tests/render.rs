@@ -93,8 +93,20 @@ async fn unimplemented_surfaces_say_which_milestone() {
     assert!(out.contains("Not implemented"), "got: {out}");
     assert!(out.contains("M4"));
 
+    let out = screen(store, Route::surface(SurfaceId::PullRequests), 80, 12).await;
+    assert!(out.contains("M2"), "got: {out}");
+}
+
+/// The landing surface, reached through the router the way `omaghy dashboard`
+/// reaches it. Replaces the half of the test above that asserted the
+/// dashboard was still a stub — W2.2 landed it.
+#[tokio::test]
+async fn the_dashboard_is_the_landing_surface() {
+    let store = Arc::new(FakeStore::with_corpus());
     let out = screen(store, Route::surface(SurfaceId::Dashboard), 80, 12).await;
-    assert!(out.contains("W2.2"), "got: {out}");
+    assert!(!out.contains("Not implemented"), "got: {out}");
+    assert!(out.contains("Needs my review"), "got: {out}");
+    assert!(out.contains("next section"), "the footer is its own: {out}");
 }
 
 /// Where the cursor actually is, by style rather than by text — the only way
