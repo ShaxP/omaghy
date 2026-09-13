@@ -1,0 +1,21 @@
+{
+  "name": "unauthorized",
+  "note": "401 from a token that is not one. Recorded rather than described, so the error mapping is checked against GitHub's actual envelope. Note that a 401 carries no X-RateLimit-* headers at all.",
+  "recorded_at": "2026-09-12T08:05:00.149276164Z",
+  "interactions": [
+    {
+      "request": {
+        "method": "GET",
+        "path": "/user"
+      },
+      "response": {
+        "status": 401,
+        "headers": {
+          "content-type": "application/json; charset=utf-8",
+          "x-github-media-type": "github.v3; format=json"
+        },
+        "body": "{\r\n  \"message\": \"Bad credentials\",\r\n  \"documentation_url\": \"https://docs.github.com/rest\",\r\n  \"status\": \"401\"\r\n}"
+      }
+    }
+  ]
+}
