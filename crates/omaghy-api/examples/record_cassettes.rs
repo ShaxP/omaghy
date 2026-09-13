@@ -271,7 +271,7 @@ async fn record_notification_page(
     if public != Some(true) {
         println!(
             "  SKIPPED: could not confirm {OWNER}/{NOTIFICATION_REPO} is public \
-             (private = {public:?}). A notification body is only ever recorded \
+             (public = {public:?}). A notification body is only ever recorded \
              from a repository GitHub says is public."
         );
         return Ok(None);
@@ -376,6 +376,10 @@ async fn record_mark_read(
     recorder: &RecordingTransport,
     page: &[Notification],
 ) -> Result<(), Boxed> {
+    if page.is_empty() {
+        println!("  SKIPPED: no notification page, so no thread to mark read");
+        return Ok(());
+    }
     let Some(already_read) = page.iter().find(|n| !n.unread) else {
         println!(
             "  SKIPPED: every thread on the page is unread, and recording this would mark one read"
