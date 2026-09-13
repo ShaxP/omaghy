@@ -36,6 +36,7 @@ finding things.
 |---|---|
 | [`spec/00-overview.md`](spec/00-overview.md) | Product, surfaces, milestones, architecture, decisions already made |
 | [`spec/10-domain-model.md`](spec/10-domain-model.md) | The vocabulary `omaghy-model` owns |
+| [`spec/40-config.md`](spec/40-config.md) | `config.toml`: every setting, and what is deliberately not one |
 
 ## Building
 

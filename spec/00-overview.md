@@ -140,9 +140,9 @@ adds semantic roles (accent, urgent, muted, added/removed) for themes that want
 them, re-rendered on `omarchy theme set`. **Never require the template**; a
 design that is illegible on 16 colours is a broken design.
 
-**Config.** `~/.config/omaghy/config.toml` — dashboard sections, default repo
-scope, keymap overrides, refresh intervals. Absent config must produce a
-working app.
+**Config.** `~/.config/omaghy/config.toml` — see `40-config.md`, which is
+normative. Absent config must produce a working app, unknown keys warn rather
+than fail, and icons are deliberately not configurable.
 
 **Keymap.** Vim-shaped by default: `j`/`k`, `g`/`G`, `/` search, `:` palette,
 `?` help, `q` back, `o` open in browser. Every binding overridable; every
