@@ -86,6 +86,13 @@ impl NotificationQuery {
         for reason in &self.reasons {
             k.push_str(&format!(":reason={}", reason.label()));
         }
+        // `kinds` narrows the result set exactly as `reasons` does, so omitting
+        // it made two different queries share a key. Harmless while the cache
+        // holds one inbox per viewer and filters in Rust, but it silently
+        // misleads anyone using this as a list key. Found by W1.2.
+        for kind in &self.kinds {
+            k.push_str(&format!(":kind={kind:?}"));
+        }
         if let Some(s) = &self.search {
             k.push_str(&format!(":q={s}"));
         }
@@ -142,6 +149,26 @@ mod tests {
         };
         assert_ne!(all.cache_key(), repo.cache_key());
         assert!(repo.cache_key().contains("ShaxP/shax"));
+    }
+
+    #[test]
+    fn kinds_change_the_cache_key_just_as_reasons_do() {
+        use omaghy_model::SubjectKind;
+        let all = NotificationQuery::default();
+        let prs = NotificationQuery {
+            kinds: vec![SubjectKind::PullRequest],
+            ..Default::default()
+        };
+        let issues = NotificationQuery {
+            kinds: vec![SubjectKind::Issue],
+            ..Default::default()
+        };
+        assert_ne!(all.cache_key(), prs.cache_key());
+        assert_ne!(
+            prs.cache_key(),
+            issues.cache_key(),
+            "two filters must not share a key"
+        );
     }
 
     #[test]

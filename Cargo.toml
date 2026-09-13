@@ -50,6 +50,10 @@ rusqlite    = { version = "0.40", features = ["bundled", "time"] }
 ratatui     = "0.30"
 crossterm   = { version = "0.29", features = ["event-stream"] }
 tui-input   = "0.15"
+# Cell width is display width, not char count: one CJK glyph occupies two
+# cells and a combining mark none. Already in the tree via ratatui, so this
+# adds no resolution.
+unicode-width = "0.2"
 
 # binary
 clap        = { version = "4", features = ["derive", "env"] }

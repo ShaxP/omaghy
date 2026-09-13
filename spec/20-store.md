@@ -64,10 +64,14 @@ pub enum StoreEvent {
     Updated(RefreshTarget),                 // new data landed; re-query
     RefreshStarted(RefreshTarget),
     RefreshFailed { target: RefreshTarget, error: StoreError },
-    RateLimited { until: OffsetDateTime },
+    RateLimited { kind: LimitKind, until: OffsetDateTime },
     AuthLost(AuthError),
 }
 ```
+
+`RateLimited` carries the kind because the UI says different things for the
+two: a primary limit is "back at 14:05", a secondary one is "slow down", and
+only the latter means an in-flight mutation must not be retried.
 
 Events say *what changed*, never carry the data. Carrying payloads means two
 paths into the UI's state and they diverge; re-querying the cache is cheap and
