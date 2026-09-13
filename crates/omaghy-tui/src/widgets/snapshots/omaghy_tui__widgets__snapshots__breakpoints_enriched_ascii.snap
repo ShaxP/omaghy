@@ -1,0 +1,51 @@
+---
+source: crates/omaghy-tui/src/widgets/snapshots.rs
+expression: "breakpoints(&rows, Icons::ASCII)"
+---
+── 40 cols: [Title, Age] ──
+>* Add SocketServer reconnect back~   4m
+ * Bar widget plugins declare a pr~  22m
+   fix: syntax highlighting follow~   2h
+   Refactor the Wayland layer-shel~   8h
+
+── 59 cols: [Title, Age] ──
+>* Add SocketServer reconnect backoff and idle timeout   4m
+ * Bar widget plugins declare a preferred section       22m
+   fix: syntax highlighting follows the Dark/Light to~   2h
+   Refactor the Wayland layer-shell surface lifecycle~   8h
+
+── 60 cols: [Icon, Title, Age] ──
+>* o Add SocketServer reconnect backoff and idle timeo~   4m
+ * o Bar widget plugins declare a preferred section      22m
+   M fix: syntax highlighting follows the Dark/Light t~   2h
+   d Refactor the Wayland layer-shell surface lifecycl~   8h
+
+── 79 cols: [Icon, Title, Age] ──
+>* o Add SocketServer reconnect backoff and idle timeout                     4m
+ * o Bar widget plugins declare a preferred section                         22m
+   M fix: syntax highlighting follows the Dark/Light toggle                  2h
+   d Refactor the Wayland layer-shell surface lifecycle so that anchors, ~   8h
+
+── 80 cols: [Icon, Title, Repo, State, Age] ──
+>* o Add SocketServer reconnect backoff and ~ ~/quickshell         o open     4m
+ * o Bar widget plugins declare a preferred ~ basecamp/omarchy     o open    22m
+   M fix: syntax highlighting follows the Da~ ShaxP/shax           M merged   2h
+   d Refactor the Wayland layer-shell surfac~ ~/an-equally-long-r~ d draft    8h
+
+── 99 cols: [Icon, Title, Repo, State, Age] ──
+>* o Add SocketServer reconnect backoff and idle timeout         ~/quickshell         o open     4m
+ * o Bar widget plugins declare a preferred section              basecamp/omarchy     o open    22m
+   M fix: syntax highlighting follows the Dark/Light toggle      ShaxP/shax           M merged   2h
+   d Refactor the Wayland layer-shell surface lifecycle so that~ ~/an-equally-long-r~ d draft    8h
+
+── 100 cols: [Icon, Title, Repo, Number, State, Checks, Age] ──
+>* o Add SocketServer reconnect backoff and idle t~ ~/quickshell           #412 o open   ! 2/14   4m
+ * o Bar widget plugins declare a preferred section basecamp/omarchy      #1904 o open   ~    3  22m
+   M fix: syntax highlighting follows the Dark/Lig~ ShaxP/shax              #61 M merged +   14   2h
+   d Refactor the Wayland layer-shell surface life~ ~/an-equally-long-r~ #12345 d draft           8h
+
+── 120 cols: [Icon, Title, Repo, Number, State, Checks, Actor, Age] ──
+>* o Add SocketServer reconnect backoff and idle timeout   ~/quickshell           #412 o open   ! 2/14 outfoxxed      4m
+ * o Bar widget plugins declare a preferred section        basecamp/omarchy      #1904 o open   ~    3 dhh           22m
+   M fix: syntax highlighting follows the Dark/Light togg~ ShaxP/shax              #61 M merged +   14 ShaxP          2h
+   d Refactor the Wayland layer-shell surface lifecycle s~ ~/an-equally-long-r~ #12345 d draft         a-very-long~   8h

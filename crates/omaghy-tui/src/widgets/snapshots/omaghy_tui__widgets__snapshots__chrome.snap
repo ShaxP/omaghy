@@ -1,0 +1,35 @@
+---
+source: crates/omaghy-tui/src/widgets/snapshots.rs
+expression: out
+---
+── unicode · info ──
+ Notifications · ShaxP/shax · 10 unread · 29 tota ▘ refreshing  cached  ShaxP
+ j / k move  Enter toggle read  q quit                            ▘ Refreshing…
+
+── unicode · success ──
+ Notifications · ShaxP/shax · 10 unread · 29 tota ▘ refreshing  cached  ShaxP
+ j / k move  Enter toggle read  q quit                           Marked 3 read
+
+── unicode · error ──
+ Notifications · ShaxP/shax · 10 unread · 29 tota ▘ refreshing  cached  ShaxP
+ j / k move  Enter toggle read  q quit                           access denied
+
+── unicode · none ──
+ Notifications · ShaxP/shax · 10 unread · 29 tota ▘ refreshing  cached  ShaxP
+ j / k move  Enter toggle read  q quit
+
+── ascii · info ──
+ Notifications - ShaxP/shax - 10 unread · 29 tota | refreshing t cached & ShaxP
+ j / k move  Enter toggle read  q quit                            | Refreshing…
+
+── ascii · success ──
+ Notifications - ShaxP/shax - 10 unread · 29 tota | refreshing t cached & ShaxP
+ j / k move  Enter toggle read  q quit                          + Marked 3 read
+
+── ascii · error ──
+ Notifications - ShaxP/shax - 10 unread · 29 tota | refreshing t cached & ShaxP
+ j / k move  Enter toggle read  q quit                          X access denied
+
+── ascii · none ──
+ Notifications - ShaxP/shax - 10 unread · 29 tota | refreshing t cached & ShaxP
+ j / k move  Enter toggle read  q quit
