@@ -31,7 +31,15 @@ async fn screen(store: Arc<dyn Store>, route: Route, w: u16, h: u16) -> String {
 async fn the_cursor_starts_on_the_first_row() {
     let store = Arc::new(FakeStore::with_corpus());
     let out = screen(store, Route::surface(SurfaceId::Notifications), 100, 12).await;
-    let first_row = out.lines().nth(1).unwrap_or_default();
+    // `group = by-repo` is the default (40-config.md §2), so line 1 is a
+    // section header and the newest notification is the first row beneath it.
+    let mut lines = out.lines().skip(1);
+    let header = lines.next().unwrap_or_default();
+    let first_row = lines.next().unwrap_or_default();
+    assert!(
+        header.contains("quickshell"),
+        "the newest row's repository heads the list, got: {header}"
+    );
     assert!(
         first_row.contains("Add SocketServer"),
         "newest notification should be the first row, got: {first_row}"
@@ -133,9 +141,12 @@ async fn the_highlight_lands_on_the_cursor_row() {
         })
         .collect();
 
+    // Two lines, because `rows = two-line` is the default and a row's cursor
+    // covers both of its lines; y=1 is the section header, so the first row
+    // starts at y=2.
     assert_eq!(
         reversed,
-        vec![1],
-        "exactly the first list row (y=1, below the header) should be highlighted"
+        vec![2, 3],
+        "exactly the first list row — both its lines — should be highlighted"
     );
 }
