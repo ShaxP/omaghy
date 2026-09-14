@@ -125,6 +125,7 @@ fn try_open(path: &Path) -> Result<(Connection, Opened), CacheError> {
 
     let conn = Connection::open(path).map_err(|e| error::open("opening the cache", e))?;
     prepare(&conn)?;
+    integrity(&conn)?;
 
     let version = user_version(&conn)?;
     if version == SCHEMA_VERSION {
@@ -215,6 +216,35 @@ fn is_empty(conn: &Connection) -> Result<bool, CacheError> {
         )
         .map_err(|e| error::open("inspecting the schema", e))?;
     Ok(n == 0)
+}
+
+/// Ask SQLite whether the file is actually intact.
+///
+/// Opening only reads the header, so damage to a page inside an otherwise
+/// valid database is invisible until something reads that page — which meant
+/// the error surfaced from an ordinary query, long after the one place that
+/// knows how to rebuild had finished. It then came back on every start for
+/// ever, while the message promised a rebuild that never happened.
+///
+/// `quick_check` stops at the first problem and skips the index cross-checks
+/// `integrity_check` does, which is the right trade for a cache: cheap, and we
+/// only need a yes or no.
+fn integrity(conn: &Connection) -> Result<(), CacheError> {
+    let verdict: String = conn
+        .query_row("PRAGMA quick_check(1)", [], |r| r.get(0))
+        .map_err(|e| CacheError::Corrupt(format!("checking the cache: {e}")))?;
+    if verdict == "ok" {
+        return Ok(());
+    }
+    // `quick_check` answers in several lines of internal detail. One line is
+    // what reaches a footer, and the rest helps nobody who is not debugging
+    // SQLite itself.
+    let first = verdict
+        .lines()
+        .find(|l| !l.trim().is_empty() && !l.starts_with("***"))
+        .unwrap_or("the file is not intact")
+        .trim();
+    Err(CacheError::Corrupt(first.to_owned()))
 }
 
 /// Delete the database and both WAL sidecars. Leaving `-wal` behind next to a

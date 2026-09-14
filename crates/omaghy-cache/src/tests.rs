@@ -1680,3 +1680,56 @@ fn dashboard_sections_are_keyed_by_query_not_title() {
     assert_ne!(a, b);
     assert_eq!(a, dashboard_list_key("is:open is:pr review-requested:@me"));
 }
+
+#[test]
+fn damage_inside_a_valid_database_is_found_at_open_not_on_a_read() {
+    // The header stays intact, so SQLite opens the file happily and only
+    // notices when something reads the damaged page. That surfaced as an
+    // error from an ordinary query, long after the one place that knows how
+    // to rebuild had finished — so it came back on every start for ever,
+    // while the message promised a rebuild that never happened.
+    let dir = std::env::temp_dir().join(format!(
+        "omaghy-mid-{}-{}",
+        std::process::id(),
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+    std::fs::create_dir_all(&dir).unwrap();
+    let path = dir.join("cache.db");
+
+    {
+        let cache = Cache::open(&path, "ShaxP").expect("a real cache");
+        cache
+            .put_notifications(&omaghy_store::fake::corpus())
+            .expect("with rows in it");
+    }
+
+    let mut bytes = std::fs::read(&path).unwrap();
+    assert!(bytes.len() > 4096, "needs more than a header to damage");
+    for b in bytes.iter_mut().skip(4096) {
+        *b = 0xAA;
+    }
+    std::fs::write(&path, &bytes).unwrap();
+
+    // Reported, not swallowed — the caller may be holding rows from the file
+    // that was just replaced.
+    let first = Cache::open(&path, "ShaxP");
+    assert!(
+        matches!(first, Err(CacheError::Corrupt(_))),
+        "corruption should be found at open, got {first:?}"
+    );
+
+    // And repaired, so it does not come back for ever.
+    let second = Cache::open(&path, "ShaxP").expect("the rebuilt cache opens");
+    assert!(
+        second
+            .notifications(&NotificationQuery::default())
+            .expect("and reads")
+            .is_empty(),
+        "a rebuilt cache is empty, not broken"
+    );
+
+    let _ = std::fs::remove_dir_all(&dir);
+}
