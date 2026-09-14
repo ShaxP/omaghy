@@ -405,28 +405,35 @@ fn status_cell(status: &SubjectStatus) -> Option<Cell> {
 /// having been skipped.
 fn checks_cell(rollup: &CheckRollup) -> Option<Cell> {
     let total = rollup.passed + rollup.failed + rollup.pending + rollup.skipped;
+
+    // A count of zero means the individual runs were not fetched, not that
+    // nothing ran — the enrichment query asks for the rollup state and not the
+    // run list. Rendering "0" beside a green tick says something false, so the
+    // glyph stands alone until there is a number worth showing.
+    let count = |n: u16| if n == 0 { String::new() } else { n.to_string() };
+
     match rollup.state {
         RollupState::None => None,
         RollupState::Success => Some(Cell::new(
             Icon::CheckPass,
-            rollup.passed.to_string(),
+            count(rollup.passed),
             Role::Success,
         )),
         RollupState::Failure => Some(Cell::new(
             Icon::CheckFail,
-            format!("{}/{total}", rollup.failed),
+            if total == 0 {
+                String::new()
+            } else {
+                format!("{}/{total}", rollup.failed)
+            },
             Role::Danger,
         )),
         RollupState::Pending => Some(Cell::new(
             Icon::CheckPending,
-            rollup.pending.to_string(),
+            count(rollup.pending),
             Role::Warning,
         )),
-        RollupState::Neutral => Some(Cell::new(
-            Icon::CheckPending,
-            total.to_string(),
-            Role::Muted,
-        )),
+        RollupState::Neutral => Some(Cell::new(Icon::CheckPending, count(total), Role::Muted)),
     }
 }
 
@@ -931,6 +938,23 @@ impl Notifications {
             Some(num) => format!("{} #{num}", kind_long(&n.kind)),
             None => kind_long(&n.kind).to_owned(),
         });
+        // State and checks belong here too. One-line mode carries them as
+        // columns; this line was built from repo, reason and number alone, so
+        // enrichment was fetched, cached, and then discarded at render time —
+        // a merged pull request read exactly like an open one.
+        // Only a real state. The state column falls back to the subject kind
+        // when there is no detail, and this line has already named the kind in
+        // full — "check suite · checks" says one thing twice.
+        if n.detail.ready().is_some()
+            && let Some(state) = &row.state
+        {
+            parts.push(state.text.clone());
+        }
+        if let Some(checks) = &row.checks
+            && !checks.text.is_empty()
+        {
+            parts.push(format!("checks {}", checks.text));
+        }
         let secondary = parts.join(&format!(" {} ", icons.dot()));
 
         let second = Line::from(vec![

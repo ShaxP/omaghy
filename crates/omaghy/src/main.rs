@@ -4,9 +4,13 @@
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
-use omaghy_store::FakeStore;
+use omaghy_api::viewer_login;
+use omaghy_cache::SqliteStore;
+use omaghy_store::{FakeStore, Store, Viewer};
+use omaghy_sync::Syncer;
 use omaghy_tui::{App, Route, terminal};
 use std::sync::Arc;
+use time::OffsetDateTime;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -40,13 +44,6 @@ fn main() -> Result<()> {
 }
 
 async fn run(route: Route) -> Result<()> {
-    // Still the fixture corpus: wiring SqliteStore to the API is M1
-    // integration. `OMAGHY_FAKE` makes the unhappy half of the state matrix
-    // reachable by running the program — without it only "populated" could be
-    // seen by a human, so most of `30-ui.md` §8 was unsmokeable. Found by W2.2.
-    let store = Arc::new(fake_store(std::env::var("OMAGHY_FAKE").ok().as_deref())?);
-    let now = omaghy_store::fake::FIXTURE_NOW;
-
     // Without this the failure is `No such device or address (os error 6)`,
     // which is what you get piping omaghy, running it from a script, or in a
     // container. Name the actual problem instead.
@@ -56,6 +53,22 @@ async fn run(route: Route) -> Result<()> {
              If you are piping or scripting, there is no non-interactive mode yet."
         );
     }
+
+    // Checked before the store is built: `real_store` authenticates and asks
+    // GitHub who we are, and spending a round trip to then refuse to start is
+    // rude to both ends.
+    // `OMAGHY_FAKE` keeps the fixture corpus reachable, because it is the only
+    // way a human can see the unhappy half of `30-ui.md` §8 — a real inbox
+    // will not produce "rate limited" on demand. Absent, omaghy talks to
+    // GitHub.
+    let fake = std::env::var("OMAGHY_FAKE").ok();
+    let (store, now): (Arc<dyn Store>, OffsetDateTime) = match fake.as_deref() {
+        Some(mode) => (
+            Arc::new(fake_store(Some(mode))?),
+            omaghy_store::fake::FIXTURE_NOW,
+        ),
+        None => (real_store().await?, OffsetDateTime::now_utc()),
+    };
 
     let mut tui = terminal::init().context("could not set up the terminal")?;
     let _guard = terminal::Guard;
@@ -71,6 +84,67 @@ async fn run(route: Route) -> Result<()> {
     // obvious for the normal path.
     terminal::restore().ok();
     result.map_err(Into::into)
+}
+
+/// The real thing: a cache on disk, fed by GitHub.
+///
+/// Construction is circular by nature — the store holds the remote, and the
+/// remote writes back into the store — so the syncer is built first, handed to
+/// the store, and only then given its way back (`omaghy_sync::Syncer::attach`).
+async fn real_store() -> Result<Arc<dyn Store>> {
+    use omaghy_api::{GitHubClient, ReqwestTransport, resolve_token};
+
+    let resolved = resolve_token().context("could not find a GitHub token")?;
+    tracing::info!(source = ?resolved.source, "token resolved");
+
+    // `ReqwestTransport::new` installs the `ring` crypto provider — not
+    // `aws-lc-rs`, which would need cmake (PREREQUISITES.md §5.1).
+    let transport = Arc::new(ReqwestTransport::new().context("could not build an HTTP client")?);
+    let client = Arc::new(GitHubClient::new(resolved.token, transport));
+
+    // The cache is keyed by viewer, so this has to happen before it opens.
+    // One GraphQL point, once per start — and it doubles as the check that the
+    // token actually works, which is worth failing on here rather than three
+    // screens later.
+    let login = viewer_login(&client)
+        .await
+        .context("could not ask GitHub who this token belongs to")?;
+    tracing::info!(%login, "authenticated");
+
+    let syncer = Syncer::new(client);
+    let store =
+        Arc::new(open_cache(&cache_path()?, Viewer::new(login))?.with_remote(syncer.clone()));
+    syncer.attach(&store);
+    Ok(store)
+}
+
+/// Open the cache, tolerating one that has to be rebuilt on the way in.
+///
+/// `Cache::open` rebuilds a corrupt file *and still returns the error*, so a
+/// caller holding rows from the file just deleted learns they are stale
+/// (`spec/20-store.md` §3.2). At startup nobody holds anything, and refusing
+/// to launch over a cache we have already replaced is the wrong answer — a
+/// half-deleted `cache.db` made omaghy exit before drawing a frame.
+fn open_cache(path: &std::path::Path, viewer: Viewer) -> Result<SqliteStore> {
+    use omaghy_model::{CacheError, StoreError};
+
+    match SqliteStore::open(path, viewer.clone()) {
+        Ok(store) => Ok(store),
+        Err(StoreError::Cache(CacheError::Corrupt(why))) => {
+            tracing::warn!(%why, "cache was unusable and has been rebuilt");
+            // The rebuild has already happened; this opens what it left.
+            SqliteStore::open(path, viewer).context("could not open the rebuilt cache")
+        }
+        Err(e) => Err(e).context("could not open the cache"),
+    }
+}
+
+/// `$XDG_CACHE_HOME/omaghy/cache.db`.
+fn cache_path() -> Result<std::path::PathBuf> {
+    let dirs = directories::ProjectDirs::from("", "", "omaghy").context("no home directory")?;
+    let dir = dirs.cache_dir();
+    std::fs::create_dir_all(dir)?;
+    Ok(dir.join("cache.db"))
 }
 
 /// Build the fixture store, optionally misbehaving.
