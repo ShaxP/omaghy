@@ -19,7 +19,14 @@ value, and the accepted set. `reason = "glif"` must say so; it must not
 silently render nothing.
 
 **Config is read once, at startup.** Live reload is not a goal. `omaghy` starts
-in milliseconds; restarting it is cheaper than watching a file.
+in milliseconds; restarting it is cheaper than watching a file. The one
+exception is a change made from the settings surface (§6), which applies at
+once — the change came from inside the program and there is nothing to detect.
+
+**The file is not the only way in.** Everything in §2 is also editable from the
+settings surface, and most people will never open the file. It stays the source
+of truth: the surface reads and writes it, rather than keeping a second store
+that could disagree with it.
 
 ---
 
@@ -139,3 +146,72 @@ deciding on paper.
 every visible row shares a repository — which inside a `by-repo` group is
 always. So with the defaults above, the group header names the repository and
 the column does not repeat it; `repo` governs ungrouped views.
+
+---
+
+## 6. The settings surface
+
+Editing a TOML file is a poor way to discover that an option exists. Every
+setting in §2 is therefore reachable from a **settings surface** inside omaghy,
+and that surface is how most people will change them.
+
+**Reached by `,`, and from the command palette.** Deliberately *not* one of the
+numbered surfaces: `1`–`7` address the seven content surfaces of
+`30-ui.md` §2, and renumbering them to make room would break a keystroke people
+have in their fingers. Settings is cross-cutting, like help and the palette.
+
+### 6.1 What it shows
+
+Sections mirroring §2, each setting on a row: its name, its current value, and
+the alternatives. Moving the cursor and pressing `Enter` — or `h`/`l` — cycles
+the value.
+
+**Each row states where its value came from**: `default`, `config.toml`,
+environment, or flag. This is the §4 precedence chain made visible, and it is
+the thing a settings screen usually gets wrong — someone edits the file, sees
+no change, and cannot tell that an environment variable is winning.
+
+A one-line description per setting, in the same words as §2's comments. Both
+come from one source, so they cannot drift.
+
+### 6.2 Changes apply immediately
+
+A setting takes effect on the frame after it changes, with no restart and no
+save step. Changing `rows` to `one-line` should redraw the inbox behind the
+surface if it is visible.
+
+This is the one genuinely good thing about the W2.3 comparator, kept: seeing
+the change is how you judge it. What the comparator got wrong was being *in*
+the inbox, on undiscoverable single-letter keys, with no way to persist a
+choice — so the switcher is deleted (`30-ui.md` §9) and this replaces it.
+
+### 6.3 Writing the file
+
+A change is written to `config.toml` immediately, creating it if absent.
+
+**Comments and ordering in the file survive a write.** Someone who has
+hand-edited and annotated their config must not have it reformatted because
+they toggled one value in a UI. That means a format-preserving edit rather than
+serialize-the-whole-struct — likely `toml_edit`, which is **not** in the M1
+dependency set and needs adding under `90-plan.md` §2.1.
+
+Only settings that differ from the default are written. A file listing every
+value at its default is noise, and it silently freezes today's defaults against
+future changes.
+
+If the file cannot be written — read-only directory, no permission — the change
+still applies for the session and the surface says it could not be saved. It
+does not refuse the change, and it does not fail silently.
+
+### 6.4 What it does not do
+
+**No key rebinding.** `[keys]` stays file-only for now: capturing a chord
+inside a TUI that is itself driven by keys is a surface of its own, and a
+half-working one is worse than an honest "edit the file".
+
+**No dashboard section editing.** Sections are a title plus GitHub search
+syntax — a text-entry problem, and `30-ui.md` §5 records that a surface cannot
+currently take free-typed input at all. File-only until that is fixed.
+
+Both exclusions are in §2's file, so nothing is unreachable — only less
+convenient than it will eventually be.

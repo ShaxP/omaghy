@@ -42,6 +42,7 @@ Seven, plus two cross-cutting.
 | **Actions** | Workflow runs, jobs, logs, re-run/cancel. |
 | **Repositories** | Browse, README, metadata, clone/checkout handoff. |
 | **Search** | GitHub search syntax across issues, PRs, repos, code. |
+| *Settings* | Cross-cutting. Every option in `40-config.md` §2, edited live. Reached by `,`. |
 | *Command palette* | Cross-cutting. Every action reachable by name. |
 | *Help* | Cross-cutting. Context-sensitive keymap. |
 
