@@ -102,6 +102,6 @@ mod deliberate_failure {
     /// Delete this test and the branch once the notification arrives.
     #[test]
     fn this_test_is_meant_to_fail() {
-        assert_eq!(2 + 2, 5, "deliberate: generating a CI failure notification");
+        assert_eq!(2 + 2, 5, "deliberate: second run, with web notifications now on");
     }
 }
