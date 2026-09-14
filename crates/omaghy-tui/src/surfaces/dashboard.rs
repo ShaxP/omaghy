@@ -22,6 +22,7 @@ use crate::{
     route::{Route, SurfaceId},
     surface::{Ctx, Outcome, Surface},
     theme::{Icon, Icons, Role},
+    widgets::chrome::Freshness,
     widgets::{Conditions, EmptyCopy, StateView, SurfaceState, classify, elide, list::cells},
 };
 use async_trait::async_trait;
@@ -384,6 +385,17 @@ impl Surface for Dashboard {
         BINDINGS
     }
 
+    /// The header's note comes from here; without it `App` had nothing to
+    /// ask and §8's stale indicator was unreachable.
+    fn freshness(&self) -> Option<Freshness> {
+        self.data.as_ref().map(Freshness::of)
+    }
+
+    /// What `r` means while this surface is on top.
+    fn refresh_target(&self) -> Option<RefreshTarget> {
+        Some(RefreshTarget::Dashboard)
+    }
+
     fn on_enter(&mut self, ctx: &Ctx) {
         ctx.store.refresh(RefreshTarget::Dashboard);
     }
@@ -407,6 +419,7 @@ fn pad(s: &str, width: usize, icons: Icons) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::theme::IconMode;
     use crate::widgets::test_support::{buffer, render, text};
     use omaghy_model::LimitKind;
     use omaghy_store::{
@@ -420,6 +433,7 @@ mod tests {
         Ctx {
             store,
             now: FIXTURE_NOW,
+            icons: Icons::new(IconMode::Unicode),
         }
     }
 

@@ -1,5 +1,6 @@
 ---
 source: crates/omaghy-tui/src/surfaces/notifications.rs
+assertion_line: 1850
 expression: out
 ---
 ── grey · Enter j Enter j Enter j ──

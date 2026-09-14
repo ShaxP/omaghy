@@ -40,6 +40,7 @@ use crate::{
     keys::Binding,
     surface::{Ctx, Outcome, Surface},
     theme::{Icon, IconMode, Icons, Role},
+    widgets::chrome::Freshness,
     widgets::{
         Conditions, EmptyCopy, StateView, SurfaceState, Toast, classify,
         list::{self, Cell, Column, Columns, Row},
@@ -87,12 +88,6 @@ const BINDINGS: &[Binding] = &[
     Binding::new("notification.page-up", "Ctrl-u", "half page up"),
     Binding::new("notification.last", "G", "last"),
 ];
-
-/// What the shell's footer would say if this surface had not filled it.
-///
-/// Not decoration: `q` is the only way out of the program, and a screen that
-/// does not say so is a screen somebody force-quits their terminal out of.
-const ESCAPE_HINTS: [(&str, &str); 2] = [("?", "help"), ("q", "quit")];
 
 // ---------------------------------------------------------------- variants
 
@@ -1033,36 +1028,6 @@ impl Notifications {
             Span::raw(" "),
         ]
     }
-
-    /// The whole point of this PR: the current combination, spelled out, so a
-    /// screenshot of the surface says which seven answers produced it.
-    /// The escape line.
-    ///
-    /// This exists only because `App::footer_hints` concatenates every binding
-    /// and drops the overflow, taking `q` — the one documented way out — with
-    /// it. Filed against `app.rs`; delete this the day that is fixed.
-    fn render_readout(&self, f: &mut Frame, area: Rect, _width: u16) {
-        if area.height == 0 {
-            return;
-        }
-        let mut escape: Vec<Span<'static>> = Vec::new();
-        for (i, (key, what)) in ESCAPE_HINTS.iter().enumerate() {
-            if i > 0 {
-                escape.push(Span::raw("  "));
-            }
-            escape.push(Span::styled(
-                (*key).to_owned(),
-                Role::Accent.style().add_modifier(Modifier::BOLD),
-            ));
-            escape.push(Span::raw(" "));
-            escape.push(Span::styled((*what).to_owned(), Role::Muted.style()));
-        }
-        escape.push(Span::raw(" "));
-        f.render_widget(
-            Paragraph::new(Line::from(escape)).alignment(Alignment::Right),
-            area,
-        );
-    }
 }
 
 /// Split rather than overlaid: two paragraphs on one area collide silently,
@@ -1167,9 +1132,10 @@ impl Surface for Notifications {
         // Two lines are spent on saying what this screen is: one on the
         // focused row, one on the variant combination. They are the price of
         // a screenshot that can be argued with, and they go with the switcher.
-        let readout_h = u16::from(area.height >= 3);
+        // The escape line used to live here. `App`'s footer names the way
+        // out now, so the row goes back to the list.
         let detail_h = u16::from(area.height >= 6);
-        let body_h = area.height.saturating_sub(readout_h + detail_h);
+        let body_h = area.height.saturating_sub(detail_h);
         let body = Rect {
             height: body_h,
             ..area
@@ -1177,11 +1143,6 @@ impl Surface for Notifications {
         let detail = Rect {
             y: area.y + body_h,
             height: detail_h,
-            ..area
-        };
-        let readout = Rect {
-            y: area.y + body_h + detail_h,
-            height: readout_h,
             ..area
         };
 
@@ -1204,8 +1165,6 @@ impl Surface for Notifications {
         }
 
         self.render_detail(f, detail, &state, ctx.now);
-        let width = self.variants.width.resolve(body.width);
-        self.render_readout(f, readout, width);
     }
 
     fn on_key(&mut self, key: KeyEvent, _ctx: &Ctx) -> Outcome {
@@ -1293,6 +1252,17 @@ impl Surface for Notifications {
         BINDINGS
     }
 
+    /// The header's note comes from here; without it `App` had nothing to
+    /// ask and §8's stale indicator was unreachable.
+    fn freshness(&self) -> Option<Freshness> {
+        self.page.as_ref().map(Freshness::of)
+    }
+
+    /// What `r` means while this surface is on top.
+    fn refresh_target(&self) -> Option<RefreshTarget> {
+        Some(RefreshTarget::Notifications)
+    }
+
     fn on_enter(&mut self, ctx: &Ctx) {
         ctx.store.refresh(RefreshTarget::Notifications);
     }
@@ -1323,6 +1293,7 @@ mod tests {
         Ctx {
             store: Arc::new(store),
             now: FIXTURE_NOW,
+            icons: Icons::new(IconMode::Unicode),
         }
     }
 
@@ -1731,6 +1702,7 @@ mod tests {
         let wctx = Ctx {
             store: cached.clone(),
             now: FIXTURE_NOW,
+            icons: Icons::new(IconMode::Unicode),
         };
         let mut with_cache = Notifications::new();
         with_cache.load(&wctx).await.unwrap();
@@ -1791,15 +1763,17 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn every_state_offers_a_visible_way_out() {
-        // Being stuck on an error screen with no visible way out is the worst
-        // of the eleven, so every one of them names one — see `render_readout`
-        // for why that line exists at all.
+    async fn every_state_says_something_rather_than_nothing() {
+        // Naming the way out is `App`'s footer now, and tested there. What is
+        // still this surface's job is that no state renders a blank screen —
+        // an error nobody can describe is an error nobody can report.
         for (name, (mut surface, ctx)) in state_matrix().await {
             let out = screen(&mut surface, &ctx, 88, 12);
-            let last = out.lines().last().unwrap_or_default();
-            assert!(last.contains("quit"), "{name}: no way out named in {out}");
-            assert!(last.contains("help"), "{name}: no help offered in {out}");
+            let ink: String = out.chars().filter(|c| !c.is_whitespace()).collect();
+            assert!(
+                ink.chars().count() > 20,
+                "{name} renders almost nothing: {out}"
+            );
         }
     }
 
