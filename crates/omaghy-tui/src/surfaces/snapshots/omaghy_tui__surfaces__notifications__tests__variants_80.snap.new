@@ -1,5 +1,6 @@
 ---
 source: crates/omaghy-tui/src/surfaces/notifications.rs
+assertion_line: 1816
 expression: variant_matrix(80).await
 ---
 ── reason #0 ──

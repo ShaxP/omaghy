@@ -9,10 +9,19 @@ pub mod dashboard;
 pub mod notifications;
 pub mod stub;
 
-use crate::{route::SurfaceId, surface::Surface};
+use crate::{
+    route::{Route, SurfaceId},
+    surface::Surface,
+};
 
 /// Build the surface for an id. The registry.
-pub fn build(id: SurfaceId) -> Box<dyn Surface> {
+/// Build the surface for a route.
+///
+/// Takes the whole [`Route`], not just its id: `App::push` used to discard
+/// `Route.arg`, so `search?q=…` arrived with its query thrown away. Found by
+/// W2.2. Surfaces that take an argument read it here; the rest ignore it.
+pub fn build(route: &Route) -> Box<dyn Surface> {
+    let id = route.surface;
     match id {
         SurfaceId::Dashboard => Box::new(dashboard::Dashboard::new()),
         SurfaceId::Notifications => Box::new(notifications::Notifications::new()),

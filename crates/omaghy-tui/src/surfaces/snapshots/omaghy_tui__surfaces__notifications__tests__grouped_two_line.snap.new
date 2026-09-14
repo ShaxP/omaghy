@@ -1,6 +1,6 @@
 ---
 source: crates/omaghy-tui/src/surfaces/notifications.rs
-assertion_line: 1893
+assertion_line: 1865
 expression: out
 ---
 ── grouped · two-line ──
@@ -19,9 +19,9 @@ expression: out
    ShaxP/shax (15)
     M7 slice 1: light theme + Dark/Light/System toggle                                          15m
      author · pull request #11
-
+   CI failed on main                                                                           41m
+     ci · check suite #3
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting details
-                                                                                     ? help  q quit
 
 ── grouped · two-line · ascii ──
    quickshell/quickshell (2)
@@ -39,6 +39,6 @@ expression: out
    ShaxP/shax (15)
     M7 slice 1: light theme + Dark/Light/System toggle                                          15m
      author · pull request #11
-
+   CI failed on main                                                                           41m
+     ci · check suite #3
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting details
-                                                                                     ? help  q quit

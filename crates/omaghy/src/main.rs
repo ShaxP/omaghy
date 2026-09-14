@@ -40,10 +40,11 @@ fn main() -> Result<()> {
 }
 
 async fn run(route: Route) -> Result<()> {
-    // P0.4 has no real store yet: SqliteStore arrives in W1.2. Until then the
-    // shell runs against the fixture corpus, which is enough to prove the
-    // Store reaches the screen.
-    let store = Arc::new(FakeStore::with_corpus());
+    // Still the fixture corpus: wiring SqliteStore to the API is M1
+    // integration. `OMAGHY_FAKE` makes the unhappy half of the state matrix
+    // reachable by running the program — without it only "populated" could be
+    // seen by a human, so most of `30-ui.md` §8 was unsmokeable. Found by W2.2.
+    let store = Arc::new(fake_store(std::env::var("OMAGHY_FAKE").ok().as_deref())?);
     let now = omaghy_store::fake::FIXTURE_NOW;
 
     // Without this the failure is `No such device or address (os error 6)`,
@@ -70,6 +71,46 @@ async fn run(route: Route) -> Result<()> {
     // obvious for the normal path.
     terminal::restore().ok();
     result.map_err(Into::into)
+}
+
+/// Build the fixture store, optionally misbehaving.
+///
+/// `OMAGHY_FAKE=offline` and friends exist so every screen in `30-ui.md` §8
+/// can be reached by running the program, not only by a snapshot test.
+fn fake_store(mode: Option<&str>) -> Result<FakeStore> {
+    use omaghy_model::{AuthError, LimitKind, StoreError};
+    use omaghy_store::fake::Behaviour;
+
+    let store = match mode {
+        Some("empty") => return Ok(FakeStore::empty()),
+        _ => FakeStore::with_corpus(),
+    };
+    let behaviour = match mode {
+        None | Some("") => return Ok(store),
+        Some("stale") | Some("offline") => Behaviour::offline_with_cache(),
+        Some("cold") => Behaviour::offline_without_cache(),
+        Some("refreshing") => Behaviour {
+            refreshing: true,
+            ..Default::default()
+        },
+        Some("forbidden") => Behaviour::failing(StoreError::Forbidden),
+        Some("unauthorized") => Behaviour::failing(StoreError::Auth(AuthError::Rejected)),
+        Some("ratelimited") => Behaviour::failing(StoreError::RateLimited {
+            kind: LimitKind::Primary,
+            at: omaghy_store::fake::FIXTURE_NOW,
+        }),
+        Some("error") => Behaviour::failing(StoreError::Upstream {
+            status: 502,
+            message: "bad gateway".into(),
+        }),
+        Some(other) => bail!(
+            "OMAGHY_FAKE={other} is not a mode; try one of: \
+             empty, stale, offline, cold, refreshing, forbidden, unauthorized, \
+             ratelimited, error"
+        ),
+    };
+    store.set_behaviour(behaviour);
+    Ok(store)
 }
 
 /// A TUI owns the screen, so there is no `println` to debug with. Logs go to a

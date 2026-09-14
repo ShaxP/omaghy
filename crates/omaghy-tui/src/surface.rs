@@ -5,11 +5,12 @@
 //!
 //! See `spec/30-ui.md` §3.
 
-use crate::{keys::Binding, route::Route};
+use crate::widgets::chrome::Freshness;
+use crate::{keys::Binding, route::Route, theme::Icons};
 use async_trait::async_trait;
 use crossterm::event::KeyEvent;
 use omaghy_model::Result;
-use omaghy_store::{Store, StoreEvent, Viewer};
+use omaghy_store::{RefreshTarget, Store, StoreEvent, Viewer};
 use ratatui::{Frame, layout::Rect};
 use std::sync::Arc;
 use time::OffsetDateTime;
@@ -23,6 +24,10 @@ use time::OffsetDateTime;
 pub struct Ctx {
     pub store: Arc<dyn Store>,
     pub now: OffsetDateTime,
+    /// Resolved once, at startup, from what the terminal and font can draw.
+    /// Not a preference — `40-config.md` §3 — but a surface still needs it,
+    /// and hardcoding `Unicode` in each one made the fallback unreachable.
+    pub icons: Icons,
 }
 
 impl std::fmt::Debug for Ctx {
@@ -44,8 +49,14 @@ impl Ctx {
 pub enum Outcome {
     /// Not mine — try the next handler.
     Ignored,
-    /// Handled; redraw.
+    /// Handled; redraw. Does **not** re-read the store.
     Redraw,
+    /// Handled, and the surface's data is stale — re-read before drawing.
+    ///
+    /// Separate from [`Outcome::Redraw`] because every `j`/`k` used to await
+    /// a store read, putting cursor movement on a fallible and eventually
+    /// slow path. Found by W2.3.
+    Reload,
     Push(Route),
     Pop,
     Replace(Route),
@@ -74,6 +85,34 @@ pub trait Surface: Send {
     /// Surface-local bindings, shown in help and the footer.
     fn keymap(&self) -> &[Binding] {
         &[]
+    }
+
+    /// How fresh this surface's data is, for the header's note.
+    ///
+    /// Without this `App::render` had no way to ask, so it passed `None` and
+    /// §8's "stale shows a note" was unreachable from every surface — the
+    /// whole `Fresh<T>` provenance design was decorative. Found by W2.2.
+    fn freshness(&self) -> Option<Freshness> {
+        None
+    }
+
+    /// What `r` should refresh while this surface is on top.
+    ///
+    /// `App` used to hardcode `RefreshTarget::Notifications`, so `r` on the
+    /// dashboard refreshed the inbox. Found by W2.2.
+    fn refresh_target(&self) -> Option<RefreshTarget> {
+        None
+    }
+
+    /// Whether this surface wants keys before the globals see them.
+    ///
+    /// Globals claim `q`, `r`, `o`, `:`, `?` and `1`–`7`, so a surface taking
+    /// free text would lose most of the alphabet mid-word — which is why §5's
+    /// `/` filter is unimplementable as typed input. A surface that returns
+    /// `true` receives everything except `Esc` and `Ctrl-C`, which always
+    /// escape. Found by W2.3.
+    fn wants_raw_input(&self) -> bool {
+        false
     }
 
     /// Schedule refreshes here.

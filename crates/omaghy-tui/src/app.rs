@@ -1,17 +1,17 @@
 //! The app shell: navigation stack, event loop, global keys, layout.
 
 use crate::{
-    keys::{self, Binding, GLOBAL_BINDINGS, Global},
+    keys::{self, GLOBAL_BINDINGS, Global},
     route::{Route, SurfaceId},
     surface::{Ctx, Outcome, Surface},
     surfaces, terminal,
-    theme::Role,
+    theme::{IconMode, Icons, Role},
     widgets,
 };
-use crossterm::event::{Event, KeyEventKind};
+use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt as _;
 use omaghy_model::Result;
-use omaghy_store::{RefreshTarget, Store, StoreEvent};
+use omaghy_store::{Store, StoreEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -54,7 +54,16 @@ pub struct App {
 
 impl App {
     pub fn new(store: Arc<dyn Store>, now: OffsetDateTime) -> Self {
-        let ctx = Ctx { store, now };
+        // Resolved once here rather than in each surface, so the ASCII
+        // fallback is reachable at all (`40-config.md` §3).
+        // `IconMode::resolve` is pure; reading the environment is the
+        // caller's job, which is here.
+        let icons = Icons::new(IconMode::resolve(
+            None,
+            std::env::var("TERM").ok().as_deref(),
+            std::env::var("LANG").ok().as_deref(),
+        ));
+        let ctx = Ctx { store, now, icons };
         Self {
             stack: Vec::new(),
             ctx,
@@ -90,7 +99,7 @@ impl App {
         if let Some(e) = self.stack.last_mut() {
             e.surface.on_leave(&self.ctx);
         }
-        let mut surface = surfaces::build(route.surface);
+        let mut surface = surfaces::build(&route);
         surface.on_enter(&self.ctx);
         surface.load(&self.ctx).await?;
         self.stack.push(Entry {
@@ -130,17 +139,33 @@ impl App {
             return Ok(());
         }
 
-        // The surface gets first refusal on keys the globals do not claim.
-        if let Some(action) = keys::resolve(key, self.depth()) {
+        // A surface taking free text gets everything except the two keys that
+        // must always escape, or it would lose most of the alphabet mid-word.
+        let raw = self.top().wants_raw_input();
+        let escapes = matches!(key.code, KeyCode::Esc)
+            || (key.modifiers.contains(KeyModifiers::CONTROL)
+                && matches!(key.code, KeyCode::Char('c')));
+
+        // Otherwise the surface gets first refusal on keys the globals do not
+        // claim.
+        if (!raw || escapes)
+            && let Some(action) = keys::resolve(key, self.depth())
+        {
             match action {
                 Global::Quit => self.quit = true,
                 Global::Back => self.pop(),
                 Global::Help => self.help_open = true,
                 Global::Palette => self.status = Some("Command palette arrives in W1.3".into()),
-                Global::Refresh => {
-                    self.ctx.store.refresh(RefreshTarget::Notifications);
-                    self.status = Some("Refreshing…".into());
-                }
+                Global::Refresh => match self.top().refresh_target() {
+                    // The surface says what `r` means here; App used to
+                    // hardcode the inbox, so `r` on the dashboard refreshed
+                    // the wrong thing.
+                    Some(target) => {
+                        self.ctx.store.refresh(target);
+                        self.status = Some("Refreshing…".into());
+                    }
+                    None => self.status = Some("Nothing to refresh here".into()),
+                },
                 Global::OpenInBrowser => {
                     self.status = Some("Opening in a browser arrives with the real surfaces".into())
                 }
@@ -161,7 +186,9 @@ impl App {
         let ctx = self.ctx.clone();
         match self.top().on_key(key, &ctx) {
             Outcome::Ignored => {}
-            Outcome::Redraw => {
+            // Moving the cursor must not await a store read.
+            Outcome::Redraw => self.dirty = true,
+            Outcome::Reload => {
                 self.top().load(&ctx).await?;
                 self.dirty = true;
             }
@@ -216,12 +243,16 @@ impl App {
 
         let title = self.top().title();
         let viewer = self.ctx.viewer().login.clone();
-        widgets::header::<()>(f, head, &title, &viewer, None);
+        let mut header = widgets::chrome::Header::new(&title, &viewer).icons(self.ctx.icons);
+        if let Some(fr) = self.top().freshness() {
+            header = header.freshness(fr);
+        }
+        header.render(f, head);
 
         let ctx = self.ctx.clone();
         self.top().render(f, body, &ctx);
 
-        let hints = self.footer_hints();
+        let hints = self.footer_hints(foot.width);
         let refs: Vec<(&str, &str)> = hints.iter().map(|(a, b)| (*a, *b)).collect();
         widgets::footer(f, foot, &refs);
 
@@ -245,15 +276,32 @@ impl App {
         }
     }
 
-    fn footer_hints(&mut self) -> Vec<(&'static str, &'static str)> {
-        let mut v: Vec<_> = self
-            .top()
-            .keymap()
-            .iter()
-            .map(|b: &Binding| (b.keys, b.description))
-            .collect();
-        v.push(("?", "help"));
-        v.push(("q", "quit"));
+    /// Contextual bindings, with the way out reserved first.
+    ///
+    /// These used to be concatenated and the overflow dropped from the end,
+    /// which took `q` — the only documented way to quit — off the screen once
+    /// a surface had more than about six bindings. Being stuck with no visible
+    /// exit is the worst thing this footer can do, so `? help` and `q quit`
+    /// are placed first and the surface's own bindings fill what is left.
+    /// Found by W2.3.
+    fn footer_hints(&mut self, width: u16) -> Vec<(&'static str, &'static str)> {
+        const ESCAPE: [(&str, &str); 2] = [("?", "help"), ("q", "quit")];
+        let cost = |(k, d): &(&str, &str)| k.chars().count() + 1 + d.chars().count() + 2;
+
+        let reserved: usize = ESCAPE.iter().map(cost).sum();
+        let mut budget = (width as usize).saturating_sub(reserved + 1);
+
+        let mut v: Vec<(&'static str, &'static str)> = Vec::new();
+        for b in self.top().keymap() {
+            let pair = (b.keys, b.description);
+            let c = cost(&pair);
+            if c > budget {
+                break;
+            }
+            budget -= c;
+            v.push(pair);
+        }
+        v.extend(ESCAPE);
         v
     }
 
@@ -313,6 +361,90 @@ impl App {
                 Ok(ev) = store_rx.recv() => self.on_store(ev).await?,
                 _ = tokio::signal::ctrl_c() => return Ok(()),
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::keys::Binding;
+    use crossterm::event::KeyEvent;
+    use omaghy_store::{FakeStore, RefreshTarget};
+    use std::sync::Arc;
+
+    fn app() -> App {
+        App::new(
+            Arc::new(FakeStore::with_corpus()),
+            omaghy_store::fake::FIXTURE_NOW,
+        )
+    }
+
+    #[tokio::test]
+    async fn the_way_out_survives_a_surface_with_many_bindings() {
+        // The footer used to concatenate every binding and drop the overflow,
+        // taking `q` — the only documented way to quit — off the screen.
+        let mut a = app();
+        a.start(Route::surface(SurfaceId::Notifications))
+            .await
+            .unwrap();
+
+        for width in [40u16, 60, 80, 100, 200] {
+            let hints = a.footer_hints(width);
+            assert!(
+                hints.iter().any(|(k, _)| *k == "q"),
+                "no way out at {width} columns: {hints:?}"
+            );
+            assert!(
+                hints.iter().any(|(k, _)| *k == "?"),
+                "no help at {width} columns: {hints:?}"
+            );
+        }
+    }
+
+    #[tokio::test]
+    async fn a_narrow_footer_sheds_surface_bindings_not_the_exit() {
+        let mut a = app();
+        a.start(Route::surface(SurfaceId::Notifications))
+            .await
+            .unwrap();
+
+        let wide = a.footer_hints(200).len();
+        let narrow = a.footer_hints(40).len();
+        assert!(
+            narrow < wide,
+            "narrow should carry fewer hints: {narrow} vs {wide}"
+        );
+        assert!(narrow >= 2, "the two escape hints are never shed");
+    }
+
+    #[tokio::test]
+    async fn r_refreshes_what_the_surface_says_not_always_the_inbox() {
+        let store = Arc::new(FakeStore::with_corpus());
+        let mut a = App::new(store.clone(), omaghy_store::fake::FIXTURE_NOW);
+
+        a.start(Route::surface(SurfaceId::Dashboard)).await.unwrap();
+        let before = store.scheduled().len();
+        a.on_key(KeyEvent::new(KeyCode::Char('r'), KeyModifiers::NONE))
+            .await
+            .unwrap();
+        let scheduled = store.scheduled();
+        assert!(
+            scheduled.len() > before,
+            "`r` scheduled nothing on the dashboard"
+        );
+        assert!(
+            !matches!(scheduled.last(), Some(RefreshTarget::Notifications)),
+            "`r` on the dashboard must not refresh the inbox: {scheduled:?}"
+        );
+    }
+
+    #[test]
+    fn every_global_binding_is_dotted_and_described() {
+        for b in GLOBAL_BINDINGS {
+            let _: &Binding = b;
+            assert!(b.action.contains('.'), "{} should be dotted", b.action);
+            assert!(!b.description.is_empty());
         }
     }
 }
