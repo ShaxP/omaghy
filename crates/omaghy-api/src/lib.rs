@@ -61,6 +61,7 @@ pub mod notifications;
 pub mod ratelimit;
 pub mod reqwest_transport;
 pub mod retry;
+pub mod search;
 pub mod transport;
 pub mod viewer;
 
@@ -77,5 +78,6 @@ pub use notifications::{
 pub use ratelimit::{Budget, Clock, Governor, POLL_INTERVAL_FLOOR, RateLimits, Resource};
 pub use reqwest_transport::{ReqwestTransport, install_crypto_provider};
 pub use retry::{RealSleeper, RetryPolicy, Sleeper};
+pub use search::{SEARCH_BATCH, Search};
 pub use transport::{Headers, HttpRequest, HttpResponse, Method, Transport, TransportError};
 pub use viewer::viewer_login;

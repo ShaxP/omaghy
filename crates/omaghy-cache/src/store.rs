@@ -220,16 +220,25 @@ impl Store for SqliteStore {
 
             for section in &cfg.sections {
                 let key = dashboard_list_key(&section.query);
-                let count = cache.list(&key)?.len() as u32;
-                match cache.list_meta(&key)? {
+                let count = match cache.list_meta(&key)? {
                     Some(meta) => {
                         oldest = Some(match oldest {
                             Some(o) if o < meta.fetched_at => o,
                             _ => meta.fetched_at,
                         });
+                        // How many *match*, not how many we hold. A section
+                        // fetches at most `limit` ids and renders a count, so
+                        // counting the stored ids reported the limit — a queue
+                        // of forty read as "10". `total` is absent only for a
+                        // list stored before it was fetched with one, where
+                        // the ids are the whole answer.
+                        meta.total.unwrap_or(cache.list(&key)?.len() as u32)
                     }
-                    None => any_missing = true,
-                }
+                    None => {
+                        any_missing = true;
+                        0
+                    }
+                };
                 sections.push(DashboardSectionData {
                     title: section.title.clone(),
                     query: section.query.clone(),

@@ -79,6 +79,14 @@ pub struct ListMeta {
     pub validators: Validators,
     /// Opaque GraphQL continuation token for the next page.
     pub cursor: Option<String>,
+    /// How many rows **match**, which is not how many we hold.
+    ///
+    /// A dashboard section fetches at most `limit` ids but renders a count, so
+    /// the two differ whenever a queue is longer than the limit — and the
+    /// count is the whole content of that surface until M2 brings rows. `None`
+    /// means the fetch did not report a total; callers fall back to the number
+    /// of stored ids, which is right for a list that was fetched whole.
+    pub total: Option<u32>,
     /// Whether every page was fetched. A partial list is still shown; it just
     /// cannot claim a total.
     pub complete: bool,
@@ -91,6 +99,7 @@ impl ListMeta {
         Self {
             validators: Validators::default(),
             cursor: None,
+            total: None,
             complete: true,
             fetched_at,
         }
@@ -281,18 +290,19 @@ impl Cache {
         }
 
         tx.execute(
-            "INSERT INTO list_meta (list_key, viewer, etag, last_modified, cursor, complete, fetched_at)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)
+            "INSERT INTO list_meta (list_key, viewer, etag, last_modified, cursor, total, complete, fetched_at)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
              ON CONFLICT (list_key, viewer) DO UPDATE SET
                etag = excluded.etag, last_modified = excluded.last_modified,
-               cursor = excluded.cursor, complete = excluded.complete,
-               fetched_at = excluded.fetched_at",
+               cursor = excluded.cursor, total = excluded.total,
+               complete = excluded.complete, fetched_at = excluded.fetched_at",
             rusqlite::params![
                 list_key,
                 self.viewer,
                 meta.validators.etag,
                 meta.validators.last_modified,
                 meta.cursor,
+                meta.total,
                 meta.complete as i64,
                 meta.fetched_at.unix_timestamp(),
             ],
@@ -325,7 +335,7 @@ impl Cache {
         let row = self
             .conn
             .query_row(
-                "SELECT etag, last_modified, cursor, complete, fetched_at FROM list_meta
+                "SELECT etag, last_modified, cursor, total, complete, fetched_at FROM list_meta
                  WHERE list_key = ?1 AND viewer = ?2",
                 rusqlite::params![list_key, self.viewer],
                 |r| {
@@ -333,15 +343,16 @@ impl Cache {
                         r.get::<_, Option<String>>(0)?,
                         r.get::<_, Option<String>>(1)?,
                         r.get::<_, Option<String>>(2)?,
-                        r.get::<_, i64>(3)?,
+                        r.get::<_, Option<i64>>(3)?,
                         r.get::<_, i64>(4)?,
+                        r.get::<_, i64>(5)?,
                     ))
                 },
             )
             .optional()
             .map_err(|e| error::query("list_meta", e))?;
 
-        let Some((etag, last_modified, cursor, complete, fetched_at)) = row else {
+        let Some((etag, last_modified, cursor, total, complete, fetched_at)) = row else {
             return Ok(None);
         };
         Ok(Some(ListMeta {
@@ -350,6 +361,7 @@ impl Cache {
                 last_modified,
             },
             cursor,
+            total: total.map(|t| t.max(0) as u32),
             complete: complete != 0,
             fetched_at: timestamp(fetched_at)?,
         }))

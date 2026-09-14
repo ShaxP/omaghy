@@ -65,6 +65,10 @@ const NOTIFICATION_REPO: &str = "shax";
 /// proves a failed subject does not fail the other forty-nine.
 const MISSING_REPO: &str = "this-repo-does-not-exist-omaghy-fixture";
 
+/// The repository the recorded search counts are scoped to. Public, and this
+/// one, so the fixture carries nothing the recorder would not publish anyway.
+const SEARCH_REPO: &str = "omaghy";
+
 type Boxed = Box<dyn std::error::Error>;
 
 /// Wraps the real transport and keeps every exchange, so the cassette records
@@ -150,7 +154,26 @@ async fn main() -> ExitCode {
     }
 }
 
+/// Which cassettes to record this run.
+///
+/// No argument records everything. Naming one or more records only those,
+/// because adding a cassette should not rewrite the other nine — each carries
+/// a `recorded_at`, so a blanket re-record turns a one-file change into a
+/// ten-file diff that hides which one actually moved.
+fn wanted() -> Vec<String> {
+    std::env::args().skip(1).collect()
+}
+
+fn want(only: &[String], name: &str) -> bool {
+    let yes = only.is_empty() || only.iter().any(|o| name.contains(o.as_str()));
+    if !yes {
+        println!("skipping {name} (not named on the command line)");
+    }
+    yes
+}
+
 async fn run() -> Result<(), Boxed> {
+    let only = wanted();
     let resolved = auth::resolve_token()?;
     println!("token from {}", resolved.source.describe());
 
@@ -163,13 +186,32 @@ async fn run() -> Result<(), Boxed> {
     };
     let client = GitHubClient::with_config(resolved.token, recorder.clone(), config.clone());
 
-    record_rate_limit(&client, &recorder).await?;
-    record_notifications(&client, &recorder).await?;
-    let page = record_notification_page(&client, &recorder).await?;
-    record_enrichment(&client, &recorder, page.as_deref().unwrap_or_default()).await?;
-    record_mark_read(&client, &recorder, page.as_deref().unwrap_or_default()).await?;
-    record_graphql(&client, &recorder).await?;
-    record_failures(&client, &recorder, config).await?;
+    if want(&only, "rate_limit") {
+        record_rate_limit(&client, &recorder).await?;
+    }
+    if want(&only, "notifications_conditional") {
+        record_notifications(&client, &recorder).await?;
+    }
+    let page = if want(&only, "notifications_page") {
+        record_notification_page(&client, &recorder).await?
+    } else {
+        None
+    };
+    if want(&only, "notifications_enrichment") {
+        record_enrichment(&client, &recorder, page.as_deref().unwrap_or_default()).await?;
+    }
+    if want(&only, "notifications_mark_read") {
+        record_mark_read(&client, &recorder, page.as_deref().unwrap_or_default()).await?;
+    }
+    if want(&only, "search_counts") {
+        record_search_counts(&client, &recorder).await?;
+    }
+    if want(&only, "graphql") {
+        record_graphql(&client, &recorder).await?;
+    }
+    if want(&only, "failures") {
+        record_failures(&client, &recorder, config).await?;
+    }
 
     println!("done");
     Ok(())
@@ -400,6 +442,38 @@ async fn record_mark_read(
          — `spec/20-store.md` §5 requires it and this is the proof rather than \
          the assertion. Recorded against an already-read thread on purpose: a \
          fixture that is safe to re-record is one that changes nothing.",
+        recorder.drain(),
+    )
+}
+
+/// Dashboard section counts, including the one that is a lie.
+///
+/// Scoped to this repository, which is public, because a cassette may only
+/// carry public data — the real dashboard queries are `@me`-relative and would
+/// record counts over the recorder's own private repositories.
+///
+/// The third query names a repository that does not exist. That is the point
+/// of the fixture: GitHub answers `issueCount: 0` with **no error**, so a
+/// typo in `config.toml` is indistinguishable from an empty section. Pinning
+/// it means nobody has to rediscover it by trusting a zero.
+async fn record_search_counts(
+    client: &GitHubClient,
+    recorder: &RecordingTransport,
+) -> Result<(), Boxed> {
+    println!("POST /graphql — batched search counts");
+    let queries = vec![
+        format!("repo:{OWNER}/{SEARCH_REPO} is:open is:pr"),
+        format!("repo:{OWNER}/{SEARCH_REPO} is:closed is:pr"),
+        format!("repo:{OWNER}/{MISSING_REPO} is:open"),
+    ];
+    let counts = client.search().counts(&queries).await?;
+    println!("  counts: {counts:?}");
+
+    write(
+        "search_counts",
+        "Three aliased searches in one request, over a public repository. The \
+         third names a repository that does not exist: GitHub answers 0 with no \
+         error, which is why a dashboard count cannot detect a bad query.",
         recorder.drain(),
     )
 }
