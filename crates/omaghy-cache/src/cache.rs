@@ -650,6 +650,7 @@ fn enrichment_tag<T>(e: &Enrichment<T>) -> &'static str {
         Enrichment::Absent => "absent",
         Enrichment::Pending => "pending",
         Enrichment::Failed { .. } => "failed",
+        Enrichment::NotApplicable => "not-applicable",
         Enrichment::Ready(_) => "ready",
     }
 }

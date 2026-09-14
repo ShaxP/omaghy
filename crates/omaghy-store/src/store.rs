@@ -77,5 +77,14 @@ pub trait Store: Send + Sync + 'static {
     /// Idempotent: marking an already-read thread must not error.
     async fn mark_read(&self, ids: &[NotificationId]) -> Result<()>;
 
+    /// **Local only — GitHub has no counterpart.** Verified by W2.1 against
+    /// the live API: `PATCH` with `{"unread": true}` answers 205 and leaves
+    /// the thread read.
+    ///
+    /// The method stays because undoing a mis-pressed `Enter` is worth having,
+    /// and unread is the viewer's own triage state. The consequence must be
+    /// surfaced rather than hidden: a thread marked unread here **comes back
+    /// read** on the next fetch that touches it. An implementation must not
+    /// pretend otherwise by suppressing the incoming value.
     async fn mark_unread(&self, ids: &[NotificationId]) -> Result<()>;
 }

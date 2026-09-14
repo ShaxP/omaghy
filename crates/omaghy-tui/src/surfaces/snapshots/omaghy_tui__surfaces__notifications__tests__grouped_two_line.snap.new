@@ -1,5 +1,6 @@
 ---
 source: crates/omaghy-tui/src/surfaces/notifications.rs
+assertion_line: 1893
 expression: out
 ---
 ── grouped · two-line ──

@@ -48,8 +48,8 @@ use crate::{
 use async_trait::async_trait;
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use omaghy_model::{
-    CheckRollup, Notification, NotificationId, NotificationReason, PrDisplayStatus, Result,
-    RollupState, StoreError, SubjectId, SubjectKind, age,
+    CheckRollup, IssueDisplayStatus, Notification, NotificationId, NotificationReason,
+    PrDisplayStatus, Result, RollupState, StoreError, SubjectId, SubjectKind, SubjectStatus, age,
 };
 use omaghy_store::{Fresh, NotificationQuery, Page, ReadFilter, RefreshTarget, StoreEvent};
 use ratatui::{
@@ -375,14 +375,35 @@ fn kind_long(kind: &SubjectKind) -> &str {
     }
 }
 
-fn status_cell(status: PrDisplayStatus) -> Cell {
-    let (icon, role) = match status {
-        PrDisplayStatus::Draft => (Icon::PrDraft, Role::Muted),
-        PrDisplayStatus::Open => (Icon::PrOpen, Role::Success),
-        PrDisplayStatus::Merged => (Icon::PrMerged, Role::Accent),
-        PrDisplayStatus::Closed => (Icon::PrClosed, Role::Danger),
+/// `None` for a subject that has no state — a commit, a release, a check
+/// suite. The caller falls back to the subject kind, which is what a row for
+/// one of those should say.
+fn status_cell(status: &SubjectStatus) -> Option<Cell> {
+    let (icon, label, role) = match status {
+        SubjectStatus::PullRequest(s) => {
+            let (icon, role) = match s {
+                PrDisplayStatus::Draft => (Icon::PrDraft, Role::Muted),
+                PrDisplayStatus::Open => (Icon::PrOpen, Role::Success),
+                PrDisplayStatus::Merged => (Icon::PrMerged, Role::Accent),
+                PrDisplayStatus::Closed => (Icon::PrClosed, Role::Danger),
+            };
+            (icon, s.label(), role)
+        }
+        SubjectStatus::Issue(s) => {
+            let (icon, role) = match s {
+                IssueDisplayStatus::Open => (Icon::IssueOpen, Role::Success),
+                IssueDisplayStatus::Completed => (Icon::IssueClosed, Role::Accent),
+                // Closed-as-not-planned is a closure that is not a completion,
+                // and reading it as success would be a lie.
+                IssueDisplayStatus::NotPlanned | IssueDisplayStatus::Duplicate => {
+                    (Icon::IssueClosed, Role::Muted)
+                }
+            };
+            (icon, s.label(), role)
+        }
+        SubjectStatus::None => return None,
     };
-    Cell::new(icon, status.label(), role)
+    Some(Cell::new(icon, label, role))
 }
 
 /// `None` where there is no CI at all, which is different from everything
@@ -548,10 +569,14 @@ impl Notifications {
             // The reason leads; the subject's own state keeps the state column.
             ReasonMode::Glyph => (
                 reason_icon(&n.reason),
-                Some(match n.detail.ready() {
-                    Some(d) => status_cell(d.status),
-                    None => Cell::new(kind_icon(&n.kind), kind_short(&n.kind), Role::Muted),
-                }),
+                Some(
+                    n.detail
+                        .ready()
+                        .and_then(|d| status_cell(&d.status))
+                        .unwrap_or_else(|| {
+                            Cell::new(kind_icon(&n.kind), kind_short(&n.kind), Role::Muted)
+                        }),
+                ),
             ),
             // They swap, so the two modes carry the same amount of screen.
             ReasonMode::Text => (
@@ -1892,21 +1917,42 @@ mod tests {
             "the cursor row is also reversed"
         );
 
-        // The corpus is newest-first, and its ten unread rows are its ten
-        // newest — so the marker column changes exactly once, at row 10.
-        for y in 0..10u16 {
-            assert_eq!(
-                buf[(1, y)].symbol(),
-                Icons::UNICODE.get(Icon::Unread),
-                "row {y} has no unread marker"
-            );
-            assert!(
-                buf[(6, y)].style().add_modifier.contains(Modifier::BOLD),
-                "row {y} is not bold"
-            );
+        // Read and unread interleave by age, so the marker column is not a
+        // block — it must track each row. Check against the data rather than
+        // against a row number.
+        let rows = s.display_order();
+        let items = s.items();
+        let mut seen_unread = false;
+        let mut seen_read = false;
+        for (y, &i) in rows.iter().enumerate().take(10) {
+            let y = y as u16;
+            let unread = items[i].unread;
+            seen_unread |= unread;
+            seen_read |= !unread;
+            let marker = buf[(1, y)].symbol();
+            let bold = buf[(6, y)].style().add_modifier.contains(Modifier::BOLD);
+            if unread {
+                assert_eq!(
+                    marker,
+                    Icons::UNICODE.get(Icon::Unread),
+                    "row {y} unread, no marker"
+                );
+                assert!(bold, "row {y} is unread but not bold");
+            } else {
+                assert_ne!(
+                    marker,
+                    Icons::UNICODE.get(Icon::Unread),
+                    "row {y} read, has a marker"
+                );
+                assert!(!bold, "row {y} is read but bold");
+            }
         }
-        assert_eq!(buf[(1, 10)].symbol(), " ", "row 10 is read");
-        assert!(!buf[(6, 10)].style().add_modifier.contains(Modifier::BOLD));
+        assert!(
+            seen_unread && seen_read,
+            "the corpus must interleave read and unread, or this proves nothing"
+        );
+        // Row 10 used to be the first read row, back when the corpus put every
+        // unread row above every read one. The loop above now covers it.
     }
 
     #[tokio::test]

@@ -1,5 +1,6 @@
 ---
 source: crates/omaghy-tui/src/widgets/snapshots.rs
+assertion_line: 289
 expression: "state_matrix_screens(Icons::ASCII).await"
 ---
 ── cold ──

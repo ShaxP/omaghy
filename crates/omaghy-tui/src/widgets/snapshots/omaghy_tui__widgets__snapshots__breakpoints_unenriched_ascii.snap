@@ -5,79 +5,79 @@ expression: "breakpoints(&rows, Icons::ASCII)"
 ── 40 cols: [Title, Age] ──
 >* Add SocketServer reconnect back~   4m
  * Short one                          9m
+   M7 slice 1: light theme + Dark/~  15m
  * Bar widget plugins should be ab~  22m
  * CI failed on main                 41m
  * fix: syntax highlighting follow~   2h
  * Notifications inbox: decide enr~   3h
- * Stabilize `let_chains` in the 2~   5h
- * RFC: unifying the plugin manife~   6h
+   Theme switcher should preview b~   3h
 
 ── 59 cols: [Title, Age] ──
 >* Add SocketServer reconnect backoff and idle timeout   4m
  * Short one                                             9m
+   M7 slice 1: light theme + Dark/Light/System toggle   15m
  * Bar widget plugins should be able to declare a pre~  22m
  * CI failed on main                                    41m
  * fix: syntax highlighting follows the Dark/Light/Sy~   2h
  * Notifications inbox: decide enrichment strategy       3h
- * Stabilize `let_chains` in the 2024 edition            5h
- * RFC: unifying the plugin manifest across shell sur~   6h
+   Theme switcher should preview before applying         3h
 
 ── 60 cols: [Icon, Title, Age] ──
 >* o Add SocketServer reconnect backoff and idle timeo~   4m
  * o Short one                                            9m
+   o M7 slice 1: light theme + Dark/Light/System toggle  15m
  * o Bar widget plugins should be able to declare a pr~  22m
  * W CI failed on main                                   41m
  * o fix: syntax highlighting follows the Dark/Light/S~   2h
  * o Notifications inbox: decide enrichment strategy      3h
- * o Stabilize `let_chains` in the 2024 edition           5h
- * D RFC: unifying the plugin manifest across shell su~   6h
+   o Theme switcher should preview before applying        3h
 
 ── 79 cols: [Icon, Title, Age] ──
 >* o Add SocketServer reconnect backoff and idle timeout                     4m
  * o Short one                                                               9m
+   o M7 slice 1: light theme + Dark/Light/System toggle                     15m
  * o Bar widget plugins should be able to declare a preferred section       22m
  * W CI failed on main                                                      41m
  * o fix: syntax highlighting follows the Dark/Light/System toggle           2h
  * o Notifications inbox: decide enrichment strategy                         3h
- * o Stabilize `let_chains` in the 2024 edition                              5h
- * D RFC: unifying the plugin manifest across shell surfaces                 6h
+   o Theme switcher should preview before applying                           3h
 
 ── 80 cols: [Icon, Title, Repo, State, Age] ──
 >* o Add SocketServer reconnect backoff and ~ ~/quickshell                    4m
  * o Short one                                ~/an-equally-long-r~            9m
+   o M7 slice 1: light theme + Dark/Light/Sy~ ShaxP/shax                     15m
  * o Bar widget plugins should be able to de~ basecamp/omarchy               22m
  * W CI failed on main                        ShaxP/shax                     41m
  * o fix: syntax highlighting follows the Da~ ShaxP/shax                      2h
  * o Notifications inbox: decide enrichment ~ ShaxP/omaghy                    3h
- * o Stabilize `let_chains` in the 2024 edit~ rust-lang/rust                  5h
- * D RFC: unifying the plugin manifest acros~ ~/an-equally-long-r~            6h
+   o Theme switcher should preview before ap~ basecamp/omarchy                3h
 
 ── 99 cols: [Icon, Title, Repo, State, Age] ──
 >* o Add SocketServer reconnect backoff and idle timeout         ~/quickshell                    4m
  * o Short one                                                   ~/an-equally-long-r~            9m
+   o M7 slice 1: light theme + Dark/Light/System toggle          ShaxP/shax                     15m
  * o Bar widget plugins should be able to declare a preferred s~ basecamp/omarchy               22m
  * W CI failed on main                                           ShaxP/shax                     41m
  * o fix: syntax highlighting follows the Dark/Light/System tog~ ShaxP/shax                      2h
  * o Notifications inbox: decide enrichment strategy             ShaxP/omaghy                    3h
- * o Stabilize `let_chains` in the 2024 edition                  rust-lang/rust                  5h
- * D RFC: unifying the plugin manifest across shell surfaces     ~/an-equally-long-r~            6h
+   o Theme switcher should preview before applying               basecamp/omarchy                3h
 
 ── 100 cols: [Icon, Title, Repo, Number, State, Checks, Age] ──
 >* o Add SocketServer reconnect backoff and idle t~ ~/quickshell             #1                   4m
  * o Short one                                      ~/an-equally-long-r~    #29                   9m
+   o M7 slice 1: light theme + Dark/Light/System t~ ShaxP/shax              #11                  15m
  * o Bar widget plugins should be able to declare ~ basecamp/omarchy         #2                  22m
  * W CI failed on main                              ShaxP/shax               #3                  41m
  * o fix: syntax highlighting follows the Dark/Lig~ ShaxP/shax               #4                   2h
  * o Notifications inbox: decide enrichment strate~ ShaxP/omaghy             #5                   3h
- * o Stabilize `let_chains` in the 2024 edition     rust-lang/rust           #6                   5h
- * D RFC: unifying the plugin manifest across shel~ ~/an-equally-long-r~     #7                   6h
+   o Theme switcher should preview before applying  basecamp/omarchy        #15                   3h
 
 ── 120 cols: [Icon, Title, Repo, Number, State, Checks, Actor, Age] ──
 >* o Add SocketServer reconnect backoff and idle timeout   ~/quickshell             #1                                4m
  * o Short one                                             ~/an-equally-long-r~    #29                                9m
+   o M7 slice 1: light theme + Dark/Light/System toggle    ShaxP/shax              #11                               15m
  * o Bar widget plugins should be able to declare a prefe~ basecamp/omarchy         #2                               22m
  * W CI failed on main                                     ShaxP/shax               #3                               41m
  * o fix: syntax highlighting follows the Dark/Light/Syst~ ShaxP/shax               #4                                2h
  * o Notifications inbox: decide enrichment strategy       ShaxP/omaghy             #5                                3h
- * o Stabilize `let_chains` in the 2024 edition            rust-lang/rust           #6                                5h
- * D RFC: unifying the plugin manifest across shell surfa~ ~/an-equally-long-r~     #7                                6h
+   o Theme switcher should preview before applying         basecamp/omarchy        #15                                3h

@@ -28,6 +28,16 @@ impl fmt::Display for NotificationId {
 }
 
 /// What a notification is about.
+///
+/// **The `serde` representation here is omaghy's storage format, not GitHub's
+/// wire format.** GitHub sends `"PullRequest"`; this serialises
+/// `"pull_request"`, and `omaghy-api` translates between them. That is the
+/// rule in `spec/10-domain-model.md` §1 — no GraphQL-generated type and no
+/// wire shape reaches this crate — and it is why deriving `Deserialize`
+/// straight onto a `/notifications` response will not work, and should not.
+///
+/// W2.1 filed this as a contract bug; it is the design. The note is here so
+/// the next reader does not file it again.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum SubjectKind {

@@ -11,6 +11,7 @@ use crate::{
     actor::Actor,
     checks::CheckRollup,
     ids::{NotificationId, SubjectKind, SubjectRef},
+    issue::IssueDisplayStatus,
     pull_request::PrDisplayStatus,
     repo::RepoRef,
 };
@@ -19,6 +20,11 @@ use time::OffsetDateTime;
 
 /// Why this notification exists. The most information-dense field in the
 /// payload, and the main axis for visual differentiation.
+///
+/// Like [`crate::SubjectKind`], the `serde` representation is omaghy's storage
+/// format. `Other` round-trips as `{"other": "..."}` — it is an escape hatch
+/// for *our* cache, not a way to swallow an unrecognised wire string. The
+/// translation from GitHub's `"a_reason_from_2028"` happens in `omaghy-api`.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NotificationReason {
@@ -84,6 +90,12 @@ pub enum Enrichment<T> {
     Failed {
         reason: String,
     },
+    /// There is nothing to fetch. A commit has no state and no number; a
+    /// release has no check run. Distinct from [`Enrichment::Failed`], which
+    /// means we tried and could not: writing "not applicable" as a failure
+    /// makes one state do the work of two, and makes an ordinary subject look
+    /// broken in the UI. Found by W2.1, which had to do exactly that.
+    NotApplicable,
     Ready(T),
 }
 
@@ -96,21 +108,56 @@ impl<T> Enrichment<T> {
     }
 
     /// Whether a fetch is worth scheduling. `Failed` is terminal — retrying it
-    /// on every open is how a lost-access repo burns the rate limit.
+    /// on every open is how a lost-access repo burns the rate limit — and so
+    /// is `NotApplicable`, which will never become applicable.
     pub fn wants_fetch(&self) -> bool {
         matches!(self, Self::Absent)
     }
 
     pub fn is_settled(&self) -> bool {
-        matches!(self, Self::Ready(_) | Self::Failed { .. })
+        matches!(
+            self,
+            Self::Ready(_) | Self::Failed { .. } | Self::NotApplicable
+        )
+    }
+
+    /// Whether the absence of detail is something to apologise for.
+    ///
+    /// A commit row showing no state is correct; a pull request showing none
+    /// because the fetch failed is not, and only one of them deserves a mark
+    /// in the UI.
+    pub fn is_a_problem(&self) -> bool {
+        matches!(self, Self::Failed { .. })
     }
 }
 
+/// How a subject stands, once enrichment resolves it.
+///
+/// Not every subject has one: a commit is neither open nor merged, and a
+/// release has no state at all.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum SubjectStatus {
+    PullRequest(PrDisplayStatus),
+    Issue(IssueDisplayStatus),
+    /// Nothing we fetch reads as a state: a commit, a release, a check suite,
+    /// or a discussion. Deliberately not a `Discussion { answered, locked }`
+    /// variant — the enrichment query does not ask for those fields, and a
+    /// variant whose data nobody fetches only invites them to be invented.
+    None,
+}
+
 /// What one batched GraphQL query adds to a whole page of notifications.
+///
+/// `number` and `status` are optional because two of the seven subject kinds
+/// cannot supply them: a commit is addressed by SHA and has no state, and a
+/// release has neither. Modelling them as required made W2.1 record ordinary
+/// commits as `Enrichment::Failed` purely to stop them being re-fetched.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SubjectDetail {
-    pub number: u64,
-    pub status: PrDisplayStatus,
+    /// `None` for SHA-addressed subjects.
+    pub number: Option<u64>,
+    pub status: SubjectStatus,
     pub checks: CheckRollup,
     pub last_actor: Option<Actor>,
     pub html_url: String,
@@ -177,8 +224,8 @@ mod tests {
     #[test]
     fn enrichment_url_wins_when_present() {
         let n = notification(Enrichment::Ready(SubjectDetail {
-            number: 61,
-            status: PrDisplayStatus::Merged,
+            number: Some(61),
+            status: SubjectStatus::PullRequest(PrDisplayStatus::Merged),
             checks: CheckRollup::empty(),
             last_actor: None,
             html_url: "https://github.com/ShaxP/shax/pull/61#issuecomment-1".into(),
