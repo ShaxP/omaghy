@@ -20,24 +20,24 @@ expression: out
      mentioned · issue #2
 
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting details
- n glyph  p shared  i unicode  w auto:100  t 2-line  m grey  g by-repo               ? help  q quit
+                                                                                     ? help  q quit
 
 ── grouped · two-line · ascii ──
-  # quickshell/quickshell (2)
->* R Add SocketServer reconnect backoff and idle timeout                                          4m
-     review requested - pull request #1
- * # Refactor the Wayland layer-shell surface lifecycle so that anchors, exclusive zones, and ~   8h
-     subscribed - pull request #8
-  # some-very-long-organization-name/an-equally-long-repository-name (3)
- * c Short one                                                                                    9m
-     commented - issue #29
- * D RFC: unifying the plugin manifest across shell surfaces                                      6h
-     team mentioned - discussion #7
-   P Tracking: plugin manifest schemaVersion 2                                                   1mo
-     manual - issue #25
-  # basecamp/omarchy (3)
- * @ Bar widget plugins should be able to declare a preferred section                            22m
-     mentioned - issue #2
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                                          4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, exclusive zones, and …   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                                    9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                                      6h
+     team mentioned · discussion #7
+    Tracking: plugin manifest schemaVersion 2                                                   1mo
+     manual · issue #25
+   basecamp/omarchy (3)
+   Bar widget plugins should be able to declare a preferred section                            22m
+     mentioned · issue #2
 
- > review requested - pull request #1 - quickshell/quickshell - 4m - awaiting details
- n glyph  p shared  i ascii  w auto:100  t 2-line  m grey  g by-repo                 ? help  q quit
+ ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting details
+                                                                                     ? help  q quit

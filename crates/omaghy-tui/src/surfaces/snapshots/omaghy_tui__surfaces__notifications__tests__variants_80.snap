@@ -3,253 +3,253 @@ source: crates/omaghy-tui/src/surfaces/notifications.rs
 expression: variant_matrix(80).await
 ---
 ── reason #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── reason #1 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          review   4m
-   Short one                                …/an-equally-long-r…  reply    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      @me     22m
-   CI failed on main                        shax                  ci      41m
-   fix: syntax highlighting follows the Da… shax                  author   2h
-   Notifications inbox: decide enrichment … omaghy                assign   3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        reply    5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  @team    6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          subbed   8h
-   Moderate severity vulnerability in open… omaghy                sec     11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n text  p shared  i unicode  w auto:80  t 1-line  m grey        ? help  q quit
+                                                                 ? help  q quit
 
 ── reason #2 ──
-▸  Add SocketServer reconnect backoff and idle time… …/quickshell           4m
-   Short one                                         …/an-equally-long-r…   9m
-   Bar widget plugins should be able to declare a p… basecamp/omarchy      22m
-   CI failed on main                                 shax                  41m
-   fix: syntax highlighting follows the Dark/Light/… shax                   2h
-   Notifications inbox: decide enrichment strategy   omaghy                 3h
-   Stabilize `let_chains` in the 2024 edition        rust-lang/rust         5h
-   RFC: unifying the plugin manifest across shell s… …/an-equally-long-r…   6h
-   Refactor the Wayland layer-shell surface lifecyc… …/quickshell           8h
-   Moderate severity vulnerability in openssl 0.10.… omaghy                11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n none  p shared  i unicode  w auto:80  t 1-line  m grey        ? help  q quit
+                                                                 ? help  q quit
 
 ── repo #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── repo #1 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        ShaxP/shax            checks  41m
-   fix: syntax highlighting follows the Da… ShaxP/shax            pr       2h
-   Notifications inbox: decide enrichment … ShaxP/omaghy          issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… ShaxP/omaghy          alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p full  i unicode  w auto:80  t 1-line  m grey  g flat ? help  q quit
+                                                                 ? help  q quit
 
 ── repo #2 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p owner  i unicode  w auto:80  t 1-line  m grey        ? help  q quit
+                                                                 ? help  q quit
 
 ── icons #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── icons #1 ──
->* R Add SocketServer reconnect backoff and ~ ~/quickshell         o pr       4m
- * c Short one                                ~/an-equally-long-r~ o issue    9m
- * @ Bar widget plugins should be able to de~ basecamp/omarchy     o issue   22m
- * W CI failed on main                        shax                 W checks  41m
- * ^ fix: syntax highlighting follows the Da~ shax                 o pr       2h
- * & Notifications inbox: decide enrichment ~ omaghy               o issue    3h
- * c Stabilize `let_chains` in the 2024 edit~ rust-lang/rust       o pr       5h
- * D RFC: unifying the plugin manifest acros~ ~/an-equally-long-r~ D disc     6h
- * # Refactor the Wayland layer-shell surfac~ ~/quickshell         o pr       8h
- * ! Moderate severity vulnerability in open~ omaghy               ! alert   11h
- > review requested - pull request #1 - quickshell/quickshell - 4m - awaiting de
- n glyph  p shared  i ascii  w auto:80  t 1-line  m grey  g flat ? help  q quit
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
+ ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
+                                                                 ? help  q quit
 
 ── width #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── width #1 ──
-▸  Add SocketServer reconnect backoff and idle timeout            4m
-   Short one                                                      9m
-   Bar widget plugins should be able to declare a preferred se…  22m
-   CI failed on main                                             41m
-   fix: syntax highlighting follows the Dark/Light/System togg…   2h
-   Notifications inbox: decide enrichment strategy                3h
-   Stabilize `let_chains` in the 2024 edition                     5h
-   RFC: unifying the plugin manifest across shell surfaces        6h
-   Refactor the Wayland layer-shell surface lifecycle so that …   8h
-   Moderate severity vulnerability in openssl 0.10.66            11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w narrow:70  t 1-line  m grey     ? help  q quit
+                                                                 ? help  q quit
 
 ── width #2 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w wide:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── rows #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── rows #1 ──
+   quickshell/quickshell (2)
 ▸  Add SocketServer reconnect backoff and idle timeout                      4m
-     quickshell/quickshell · review requested · pull request #1
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
    Short one                                                                9m
-     some-very-long-organization-name/an-equally-long-repository-name · comment…
-   Bar widget plugins should be able to declare a preferred section        22m
-     basecamp/omarchy · mentioned · issue #2
-   CI failed on main                                                       41m
-     shax · ci · check suite #3
-   fix: syntax highlighting follows the Dark/Light/System toggle            2h
-     shax · author · pull request #4
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 2-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── triage #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── triage #1 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m hide       ? help  q quit
+                                                                 ? help  q quit
 
 ── triage #2 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m sink       ? help  q quit
+                                                                 ? help  q quit
 
 ── group #0 ──
-▸  Add SocketServer reconnect backoff and … …/quickshell          pr       4m
-   Short one                                …/an-equally-long-r…  issue    9m
-   Bar widget plugins should be able to de… basecamp/omarchy      issue   22m
-   CI failed on main                        shax                  checks  41m
-   fix: syntax highlighting follows the Da… shax                  pr       2h
-   Notifications inbox: decide enrichment … omaghy                issue    3h
-   Stabilize `let_chains` in the 2024 edit… rust-lang/rust        pr       5h
-   RFC: unifying the plugin manifest acros… …/an-equally-long-r…  disc     6h
-   Refactor the Wayland layer-shell surfac… …/quickshell          pr       8h
-   Moderate severity vulnerability in open… omaghy                alert   11h
+   quickshell/quickshell (2)
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
+   some-very-long-organization-name/an-equally-long-repository-name (3)
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit
 
 ── group #1 ──
    quickshell/quickshell (2)
-▸  Add SocketServer reconnect backoff and idle timeout            pr       4m
-   Refactor the Wayland layer-shell surface lifecycle so that a…  pr       8h
+▸  Add SocketServer reconnect backoff and idle timeout                      4m
+     review requested · pull request #1
+   Refactor the Wayland layer-shell surface lifecycle so that anchors, e…   8h
+     subscribed · pull request #8
    some-very-long-organization-name/an-equally-long-repository-name (3)
-   Short one                                                      issue    9m
-   RFC: unifying the plugin manifest across shell surfaces        disc     6h
-    Tracking: plugin manifest schemaVersion 2                      issue   1mo
-   basecamp/omarchy (3)
-   Bar widget plugins should be able to declare a preferred sec…  issue   22m
-    Theme switcher should preview before applying                  issue    3d
+   Short one                                                                9m
+     commented · issue #29
+   RFC: unifying the plugin manifest across shell surfaces                  6h
+     team mentioned · discussion #7
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting de
- n glyph  p shared  i unicode  w auto:80  t 1-line  m grey       ? help  q quit
+                                                                 ? help  q quit

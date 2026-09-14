@@ -39,7 +39,7 @@
 use crate::{
     keys::Binding,
     surface::{Ctx, Outcome, Surface},
-    theme::{Icon, Icons, Role},
+    theme::{Icon, IconMode, Icons, Role},
     widgets::{
         Conditions, EmptyCopy, StateView, SurfaceState, Toast, classify,
         list::{self, Cell, Column, Columns, Row},
@@ -83,13 +83,6 @@ const BINDINGS: &[Binding] = &[
     Binding::new("notification.toggle-read", "Enter", "toggle read"),
     Binding::new("notification.unread-only", "u", "unread only"),
     Binding::new("notification.filter-repo", "/", "this repo"),
-    Binding::new("notification.variant.reason", "n", "reason"),
-    Binding::new("notification.variant.repo", "p", "repo"),
-    Binding::new("notification.variant.icons", "i", "icons"),
-    Binding::new("notification.variant.width", "w", "width"),
-    Binding::new("notification.variant.rows", "t", "rows"),
-    Binding::new("notification.variant.triage", "m", "read rows"),
-    Binding::new("notification.variant.group", "g", "grouping"),
     Binding::new("notification.page-down", "Ctrl-d", "half page down"),
     Binding::new("notification.page-up", "Ctrl-u", "half page up"),
     Binding::new("notification.last", "G", "last"),
@@ -120,15 +113,9 @@ pub enum ReasonMode {
 }
 
 impl ReasonMode {
-    fn next(self) -> Self {
-        match self {
-            Self::Glyph => Self::Text,
-            Self::Text => Self::Hidden,
-            Self::Hidden => Self::Glyph,
-        }
-    }
-
-    fn label(self) -> &'static str {
+    /// The value as `40-config.md` §2 names it. Public because the
+    /// settings surface (§6) shows the current value of each setting.
+    pub fn label(self) -> &'static str {
         match self {
             Self::Glyph => "glyph",
             Self::Text => "text",
@@ -141,60 +128,23 @@ impl ReasonMode {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RepoMode {
     /// `owner/name`, always, even when every row says the same thing.
+    #[default]
     Full,
     /// Drop `owner/` when it is the viewer's own.
     OwnerElided,
     /// Also drop the column entirely when every visible row shares one
     /// repository, naming it in the header instead. §9's full stack.
-    #[default]
     HiddenWhenShared,
 }
 
 impl RepoMode {
-    fn next(self) -> Self {
-        match self {
-            Self::Full => Self::OwnerElided,
-            Self::OwnerElided => Self::HiddenWhenShared,
-            Self::HiddenWhenShared => Self::Full,
-        }
-    }
-
-    fn label(self) -> &'static str {
+    /// The value as `40-config.md` §2 names it. Public because the
+    /// settings surface (§6) shows the current value of each setting.
+    pub fn label(self) -> &'static str {
         match self {
             Self::Full => "full",
             Self::OwnerElided => "owner",
             Self::HiddenWhenShared => "shared",
-        }
-    }
-}
-
-/// `i` — whether Octicons earn their place.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum IconVariant {
-    #[default]
-    Unicode,
-    Ascii,
-}
-
-impl IconVariant {
-    fn next(self) -> Self {
-        match self {
-            Self::Unicode => Self::Ascii,
-            Self::Ascii => Self::Unicode,
-        }
-    }
-
-    fn label(self) -> &'static str {
-        match self {
-            Self::Unicode => "unicode",
-            Self::Ascii => "ascii",
-        }
-    }
-
-    fn icons(self) -> Icons {
-        match self {
-            Self::Unicode => Icons::UNICODE,
-            Self::Ascii => Icons::ASCII,
         }
     }
 }
@@ -219,15 +169,9 @@ impl WidthMode {
     const NARROW: u16 = 70;
     const WIDE: u16 = 120;
 
-    fn next(self) -> Self {
-        match self {
-            Self::Auto => Self::Narrow,
-            Self::Narrow => Self::Wide,
-            Self::Wide => Self::Auto,
-        }
-    }
-
-    fn label(self) -> &'static str {
+    /// The value as `40-config.md` §2 names it. Public because the
+    /// settings surface (§6) shows the current value of each setting.
+    pub fn label(self) -> &'static str {
         match self {
             Self::Auto => "auto",
             Self::Narrow => "narrow",
@@ -249,20 +193,15 @@ impl WidthMode {
 /// `t` — `RowList` is single-line; the two-line mode below is built here.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RowMode {
-    #[default]
     OneLine,
+    #[default]
     TwoLine,
 }
 
 impl RowMode {
-    fn next(self) -> Self {
-        match self {
-            Self::OneLine => Self::TwoLine,
-            Self::TwoLine => Self::OneLine,
-        }
-    }
-
-    fn label(self) -> &'static str {
+    /// The value as `40-config.md` §2 names it. Public because the
+    /// settings surface (§6) shows the current value of each setting.
+    pub fn label(self) -> &'static str {
         match self {
             Self::OneLine => "1-line",
             Self::TwoLine => "2-line",
@@ -294,15 +233,9 @@ pub enum TriageMode {
 }
 
 impl TriageMode {
-    fn next(self) -> Self {
-        match self {
-            Self::Grey => Self::Hide,
-            Self::Hide => Self::Sink,
-            Self::Sink => Self::Grey,
-        }
-    }
-
-    fn label(self) -> &'static str {
+    /// The value as `40-config.md` §2 names it. Public because the
+    /// settings surface (§6) shows the current value of each setting.
+    pub fn label(self) -> &'static str {
         match self {
             Self::Grey => "grey",
             Self::Hide => "hide",
@@ -314,20 +247,15 @@ impl TriageMode {
 /// `g` — the strongest candidate fix for repeated repository names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GroupMode {
-    #[default]
     Flat,
+    #[default]
     ByRepo,
 }
 
 impl GroupMode {
-    fn next(self) -> Self {
-        match self {
-            Self::Flat => Self::ByRepo,
-            Self::ByRepo => Self::Flat,
-        }
-    }
-
-    fn label(self) -> &'static str {
+    /// The value as `40-config.md` §2 names it. Public because the
+    /// settings surface (§6) shows the current value of each setting.
+    pub fn label(self) -> &'static str {
         match self {
             Self::Flat => "flat",
             Self::ByRepo => "by-repo",
@@ -342,27 +270,13 @@ impl GroupMode {
 pub struct Variants {
     pub reason: ReasonMode,
     pub repo: RepoMode,
-    pub icons: IconVariant,
     pub width: WidthMode,
     pub rows: RowMode,
     pub triage: TriageMode,
     pub group: GroupMode,
 }
 
-impl Variants {
-    /// `n glyph · p shared · i unicode · …`, for the readout and for tests.
-    fn pairs(&self, width: u16) -> Vec<(&'static str, String)> {
-        vec![
-            ("n", self.reason.label().to_owned()),
-            ("p", self.repo.label().to_owned()),
-            ("i", self.icons.label().to_owned()),
-            ("w", format!("{}:{width}", self.width.label())),
-            ("t", self.rows.label().to_owned()),
-            ("m", self.triage.label().to_owned()),
-            ("g", self.group.label().to_owned()),
-        ]
-    }
-}
+impl Variants {}
 
 // ------------------------------------------------------------- the mapping
 
@@ -556,8 +470,11 @@ impl Notifications {
             .unwrap_or_default()
     }
 
+    /// Always Unicode where the terminal can draw it; the ASCII forms are a
+    /// capability fallback, never a preference (`40-config.md` §3). Resolution
+    /// moves to `Ctx` once it carries one — filed as a contract change.
     fn icons(&self) -> Icons {
-        self.variants.icons.icons()
+        Icons::new(IconMode::Unicode)
     }
 
     // ---- what is on screen, and in what order ---------------------------
@@ -1094,7 +1011,12 @@ impl Notifications {
 
     /// The whole point of this PR: the current combination, spelled out, so a
     /// screenshot of the surface says which seven answers produced it.
-    fn render_readout(&self, f: &mut Frame, area: Rect, width: u16) {
+    /// The escape line.
+    ///
+    /// This exists only because `App::footer_hints` concatenates every binding
+    /// and drops the overflow, taking `q` — the one documented way out — with
+    /// it. Filed against `app.rs`; delete this the day that is fixed.
+    fn render_readout(&self, f: &mut Frame, area: Rect, _width: u16) {
         if area.height == 0 {
             return;
         }
@@ -1111,36 +1033,13 @@ impl Notifications {
             escape.push(Span::styled((*what).to_owned(), Role::Muted.style()));
         }
         escape.push(Span::raw(" "));
-        // `split_line` keeps one cell of air between the halves, so the
-        // left half's budget has to allow for it or the last pair is drawn
-        // half-way and then clipped — `g fla`.
-        let budget = (area.width as usize).saturating_sub(span_cells(&escape) + 1);
-
-        let mut spans = vec![Span::raw(" ")];
-        let mut used = 1usize;
-        for (i, (key, value)) in self.variants.pairs(width).into_iter().enumerate() {
-            let sep = usize::from(i > 0) * 2;
-            let cost = sep + key.len() + 1 + list::cells(&value);
-            if used + cost > budget {
-                break;
-            }
-            used += cost;
-            if i > 0 {
-                spans.push(Span::raw("  "));
-            }
-            spans.push(Span::styled(
-                key,
-                Role::Accent.style().add_modifier(Modifier::BOLD),
-            ));
-            spans.push(Span::raw(" "));
-            spans.push(Span::styled(value, Role::Muted.style()));
-        }
-        split_line(f, area, Line::from(spans), Line::from(escape));
+        f.render_widget(
+            Paragraph::new(Line::from(escape)).alignment(Alignment::Right),
+            area,
+        );
     }
 }
 
-/// One line of the terminal carrying a left-aligned and a right-aligned half.
-///
 /// Split rather than overlaid: two paragraphs on one area collide silently,
 /// and it is always the left half that loses.
 fn split_line(f: &mut Frame, area: Rect, left: Line<'static>, right: Line<'static>) {
@@ -1171,10 +1070,6 @@ fn split_line(f: &mut Frame, area: Rect, left: Line<'static>, right: Line<'stati
             },
         );
     }
-}
-
-fn span_cells(spans: &[Span<'static>]) -> usize {
-    spans.iter().map(|s| list::cells(s.content.as_ref())).sum()
 }
 
 fn pad(s: &str, width: usize) -> String {
@@ -1338,36 +1233,6 @@ impl Surface for Notifications {
                 self.cursor = 0;
                 Outcome::Redraw
             }
-            (KeyCode::Char('n'), false) => {
-                self.variants.reason = self.variants.reason.next();
-                Outcome::Redraw
-            }
-            (KeyCode::Char('p'), false) => {
-                self.variants.repo = self.variants.repo.next();
-                Outcome::Redraw
-            }
-            (KeyCode::Char('i'), false) => {
-                self.variants.icons = self.variants.icons.next();
-                Outcome::Redraw
-            }
-            (KeyCode::Char('w'), false) => {
-                self.variants.width = self.variants.width.next();
-                Outcome::Redraw
-            }
-            (KeyCode::Char('t'), false) => {
-                self.variants.rows = self.variants.rows.next();
-                Outcome::Redraw
-            }
-            (KeyCode::Char('m'), false) => {
-                self.variants.triage = self.variants.triage.next();
-                self.clamp_cursor();
-                Outcome::Redraw
-            }
-            (KeyCode::Char('g'), false) => {
-                self.variants.group = self.variants.group.next();
-                self.clamp_cursor();
-                Outcome::Redraw
-            }
             _ => Outcome::Ignored,
         }
     }
@@ -1471,35 +1336,30 @@ mod tests {
         render(w, h, |f, a| surface.render(f, a, ctx))
     }
 
-    // ------------------------------------------------------- the keymap
+    // --------------------------------------------------------- the rows
 
     #[test]
-    fn every_variant_key_is_in_the_keymap_and_reaches_the_surface() {
+    fn every_binding_is_dotted_named_uniquely_and_described() {
         // A binding on a key `app.rs` claims globally would never arrive, and
         // nothing would fail — the key would simply do something else.
         let surface = Notifications::new();
         let map = surface.keymap();
-        for key in ['n', 'p', 'i', 'w', 't', 'm', 'g'] {
-            let binding = map
-                .iter()
-                .find(|b| b.keys == key.to_string())
-                .unwrap_or_else(|| panic!("`{key}` must be documented in keymap()"));
-            assert!(
-                binding.action.starts_with("notification.variant."),
-                "{} should be a variant action",
-                binding.action
-            );
-            for depth in [1, 2] {
-                assert_eq!(
-                    keys::resolve(KeyEvent::new(KeyCode::Char(key), KeyModifiers::NONE), depth),
-                    None,
-                    "`{key}` is claimed globally and would never reach the surface"
-                );
-            }
-        }
         for b in map {
             assert!(b.action.contains('.'), "{} should be dotted", b.action);
             assert!(!b.description.is_empty(), "{} has no description", b.action);
+            // Only single-character specs: "Enter" is a key name, not the
+            // letters E-n-t-e-r, and `r` inside it is not a binding.
+            let mut chars = b.keys.chars();
+            if let (Some(key), None) = (chars.next(), chars.next())
+                && key.is_ascii_alphanumeric()
+            {
+                assert_eq!(
+                    keys::resolve(KeyEvent::new(KeyCode::Char(key), KeyModifiers::NONE), 1),
+                    None,
+                    "`{key}` ({}) is claimed globally and would never reach the surface",
+                    b.action
+                );
+            }
         }
         let actions: BTreeSet<_> = map.iter().map(|b| b.action).collect();
         assert_eq!(actions.len(), map.len(), "action names must be unique");
@@ -1526,35 +1386,18 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn every_cycle_returns_to_where_it_started() {
-        let (mut s, ctx) = corpus_surface().await;
-        let start = s.variants;
-        for (key, steps) in [
-            ('n', 3),
-            ('p', 3),
-            ('i', 2),
-            ('w', 3),
-            ('t', 2),
-            ('m', 3),
-            ('g', 2),
-        ] {
-            for _ in 0..steps {
-                assert_eq!(press(&mut s, &ctx, key), Outcome::Redraw);
-            }
-            assert_eq!(s.variants, start, "`{key}` did not cycle back");
-        }
-    }
-
-    // --------------------------------------------------------- the rows
-
-    #[tokio::test]
     async fn the_newest_notification_is_the_first_row() {
         let (mut s, ctx) = corpus_surface().await;
         let out = screen(&mut s, &ctx, 100, 12);
+        // `group = by-repo` is the default, so the first line is a section
+        // header. Groups are ordered by their newest member, so the newest
+        // notification is still the first *row* — one line further down.
+        let mut lines = out.lines();
         assert!(
-            out.lines().next().unwrap().contains("Add SocketServer"),
-            "{out}"
+            lines.next().unwrap().contains("quickshell"),
+            "the newest row's repository heads the list: {out}"
         );
+        assert!(lines.next().unwrap().contains("Add SocketServer"), "{out}");
     }
 
     #[test]
@@ -1609,11 +1452,10 @@ mod tests {
             ] {
                 for rows in [RowMode::OneLine, RowMode::TwoLine] {
                     for group in [GroupMode::Flat, GroupMode::ByRepo] {
-                        for icons in [IconVariant::Unicode, IconVariant::Ascii] {
+                        {
                             s.variants = Variants {
                                 reason,
                                 repo,
-                                icons,
                                 rows,
                                 group,
                                 ..Default::default()
@@ -1727,12 +1569,9 @@ mod tests {
 
     #[tokio::test]
     async fn triage_modes_differ_in_what_happens_to_the_row() {
-        for (mode, key_presses) in [(TriageMode::Hide, 1), (TriageMode::Sink, 2)] {
+        for mode in [TriageMode::Hide, TriageMode::Sink] {
             let (mut s, ctx) = corpus_surface().await;
-            for _ in 0..key_presses {
-                press(&mut s, &ctx, 'm');
-            }
-            assert_eq!(s.variants.triage, mode);
+            s.variants.triage = mode;
             let before = s.items()[s.focused().unwrap()].id.clone();
             enter(&mut s, &ctx).await;
             let after = s.items()[s.focused().unwrap()].id.clone();
@@ -1759,9 +1598,8 @@ mod tests {
         for n in &mut rows {
             n.unread = false;
         }
-        let (mut s, ctx) = open(FakeStore::with_rows(rows)).await;
-        press(&mut s, &ctx, 'm');
-        assert_eq!(s.variants.triage, TriageMode::Hide);
+        let (mut s, _ctx) = open(FakeStore::with_rows(rows)).await;
+        s.variants.triage = TriageMode::Hide;
         assert_eq!(s.display_order().len(), 0);
         let state = s.state(s.filter_label().as_deref());
         assert_eq!(state.name(), "filtered-empty", "not an empty inbox");
@@ -1784,6 +1622,10 @@ mod tests {
     #[tokio::test]
     async fn filtering_to_a_repository_and_then_to_nothing_is_not_an_empty_inbox() {
         let (mut s, ctx) = corpus_surface().await;
+        // Flat, because the cursor indexes display entries: with group headers
+        // in the list, an item index is not a cursor position. What is under
+        // test is the filter, not the layout.
+        s.variants.group = GroupMode::Flat;
         // The only row in this repository is read, so scoping to it and then
         // asking for unread gives the "filtered to empty" screen.
         let index = s
@@ -1902,10 +1744,9 @@ mod tests {
         out
     }
 
-    async fn state_matrix_screens(icons: IconVariant) -> String {
+    async fn state_matrix_screens() -> String {
         let mut rendered = String::new();
         for (name, (mut surface, ctx)) in state_matrix().await {
-            surface.variants.icons = icons;
             let filter = surface.filter_label();
             assert_eq!(
                 surface.state(filter.as_deref()).name(),
@@ -1920,30 +1761,20 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn the_state_matrix_in_unicode() {
-        insta::assert_snapshot!(
-            "state_matrix_unicode",
-            state_matrix_screens(IconVariant::Unicode).await
-        );
+    async fn the_state_matrix() {
+        insta::assert_snapshot!("state_matrix", state_matrix_screens().await);
     }
 
     #[tokio::test]
-    async fn the_state_matrix_in_ascii() {
-        insta::assert_snapshot!(
-            "state_matrix_ascii",
-            state_matrix_screens(IconVariant::Ascii).await
-        );
-    }
-
-    #[tokio::test]
-    async fn every_state_that_has_no_rows_still_says_which_state_it_is() {
-        // The readout is what makes a screenshot arguable; an error screen
-        // that does not name itself is an error screen nobody can report.
+    async fn every_state_offers_a_visible_way_out() {
+        // Being stuck on an error screen with no visible way out is the worst
+        // of the eleven, so every one of them names one — see `render_readout`
+        // for why that line exists at all.
         for (name, (mut surface, ctx)) in state_matrix().await {
             let out = screen(&mut surface, &ctx, 88, 12);
             let last = out.lines().last().unwrap_or_default();
-            assert!(last.contains("n glyph"), "{name}: no readout in {out}");
             assert!(last.contains("quit"), "{name}: no way out named in {out}");
+            assert!(last.contains("help"), "{name}: no help offered in {out}");
         }
     }
 
@@ -2033,7 +1864,6 @@ mod tests {
         let mut out = String::from("── grouped · two-line ──\n");
         out.push_str(&screen(&mut s, &ctx, 100, 18));
         out.push_str("\n\n── grouped · two-line · ascii ──\n");
-        s.variants.icons = IconVariant::Ascii;
         out.push_str(&screen(&mut s, &ctx, 100, 18));
         insta::assert_snapshot!("grouped_two_line", out);
     }
@@ -2044,6 +1874,11 @@ mod tests {
     async fn unread_is_a_marker_and_weight_and_the_cursor_is_a_glyph() {
         // On a monochrome Omarchy theme neither survives on colour alone.
         let (mut s, ctx) = corpus_surface().await;
+        // One line per row and no section headers: this asserts exact cells,
+        // and what it is testing — that unread and the cursor are not carried
+        // by colour — is independent of the row layout.
+        s.variants.group = GroupMode::Flat;
+        s.variants.rows = RowMode::OneLine;
         s.cursor = 2;
         let buf = buffer(100, 14, |f, a| s.render(f, a, &ctx));
 
