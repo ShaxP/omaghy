@@ -942,7 +942,12 @@ impl Notifications {
         // columns; this line was built from repo, reason and number alone, so
         // enrichment was fetched, cached, and then discarded at render time —
         // a merged pull request read exactly like an open one.
-        if let Some(state) = &row.state {
+        // Only a real state. The state column falls back to the subject kind
+        // when there is no detail, and this line has already named the kind in
+        // full — "check suite · checks" says one thing twice.
+        if n.detail.ready().is_some()
+            && let Some(state) = &row.state
+        {
             parts.push(state.text.clone());
         }
         if let Some(checks) = &row.checks

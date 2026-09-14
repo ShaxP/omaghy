@@ -259,9 +259,12 @@ impl<'a> Notifications<'a> {
             match Target::of(&notifications[i]) {
                 Some(t) => addressable.push((i, t)),
                 None => {
-                    notifications[i].detail = Enrichment::Failed {
-                        reason: UNENRICHABLE.to_owned(),
-                    };
+                    // Not a failure: a check suite has no number and GitHub
+                    // sends it with `subject.url` null, so there is nothing to
+                    // fetch and never will be. Recording it as `Failed` made an
+                    // ordinary row render as broken — observed live before this
+                    // was fixed.
+                    notifications[i].detail = Enrichment::NotApplicable;
                 }
             }
         }
@@ -382,9 +385,6 @@ impl<'a> Notifications<'a> {
         Ok(())
     }
 }
-
-/// What is recorded against a subject we cannot address by number.
-const UNENRICHABLE: &str = "this subject is not addressed by a number, so it cannot be enriched";
 
 /// What is recorded when GitHub returned neither a node nor an error for an
 /// alias. Should not happen; recorded rather than retried if it does.
@@ -972,6 +972,38 @@ mod tests {
             subject: url.and_then(SubjectRef::from_api_url),
             detail: Enrichment::Absent,
         }
+    }
+
+    #[tokio::test]
+    async fn a_subject_with_nothing_to_fetch_is_not_a_failure() {
+        // GitHub sends a CheckSuite notification with `subject.url` null, so
+        // there is no number, no URL, and nothing that will ever be
+        // enrichable. Recording that as `Failed` made an ordinary row render
+        // as broken, and `is_a_problem()` could not tell the two apart —
+        // observed against the live API before this was fixed.
+        use crate::{auth::Token, cassette::StubTransport, client::GitHubClient};
+        use std::sync::Arc;
+
+        let mut rows = vec![notification(SubjectKind::CheckSuite, None)];
+        // No responses queued: reaching the transport at all would be the bug.
+        let stub = Arc::new(StubTransport::sequence(vec![]));
+        let client = GitHubClient::new(Token::new("t").expect("a token"), stub.clone());
+
+        Notifications::new(&client).enrich(&mut rows).await.unwrap();
+
+        assert_eq!(rows[0].detail, Enrichment::NotApplicable);
+        assert!(
+            !rows[0].detail.is_a_problem(),
+            "nothing to fetch is not a problem"
+        );
+        assert!(
+            !rows[0].detail.wants_fetch(),
+            "and must not be asked for again"
+        );
+        assert!(
+            stub.requests().is_empty(),
+            "a subject with no address must not cost a request"
+        );
     }
 
     #[test]
