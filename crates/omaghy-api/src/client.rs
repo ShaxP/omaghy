@@ -243,6 +243,25 @@ impl GitHubClient {
         &self,
         request: &GraphQlRequest,
     ) -> Result<T, StoreError> {
+        let response = self.send_graphql(request).await?;
+        graphql::decode(&response.body, self.governor.now())
+    }
+
+    /// A GraphQL query whose per-field errors survive.
+    ///
+    /// For batched queries only — see [`crate::graphql::decode_partial`]. Every
+    /// other caller wants [`GitHubClient::graphql`], where an `errors` array
+    /// means the answer is wrong and saying so beats rendering a silently
+    /// missing section.
+    pub async fn graphql_partial<T: DeserializeOwned>(
+        &self,
+        request: &GraphQlRequest,
+    ) -> Result<graphql::Partial<T>, StoreError> {
+        let response = self.send_graphql(request).await?;
+        graphql::decode_partial(&response.body, self.governor.now())
+    }
+
+    async fn send_graphql(&self, request: &GraphQlRequest) -> Result<HttpResponse, StoreError> {
         let body = serde_json::to_vec(request).map_err(|e| StoreError::Upstream {
             status: 0,
             message: format!("could not encode the GraphQL query: {e}"),
@@ -256,9 +275,7 @@ impl GitHubClient {
             .header("Content-Type", "application/json")
             .body(body);
 
-        let response = self.send(http, Resource::GraphQl, request.mutation).await?;
-
-        graphql::decode(&response.body, self.governor.now())
+        self.send(http, Resource::GraphQl, request.mutation).await
     }
 
     fn build_rest(&self, request: &RestRequest) -> HttpRequest {

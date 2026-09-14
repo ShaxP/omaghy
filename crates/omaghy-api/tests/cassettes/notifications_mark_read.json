@@ -1,0 +1,29 @@
+{
+  "name": "notifications_mark_read",
+  "note": "PATCH on a thread that was already read. GitHub answers 205 Reset Content with an empty body, which is what makes mark_read idempotent — `spec/20-store.md` §5 requires it and this is the proof rather than the assertion. Recorded against an already-read thread on purpose: a fixture that is safe to re-record is one that changes nothing.",
+  "recorded_at": "2026-09-13T06:00:23.281107881Z",
+  "interactions": [
+    {
+      "request": {
+        "method": "PATCH",
+        "path": "/notifications/threads/24555446034"
+      },
+      "response": {
+        "status": 205,
+        "headers": {
+          "content-type": "text/plain;charset=utf-8",
+          "x-accepted-oauth-scopes": "notifications, repo",
+          "x-github-api-version-selected": "2022-11-28",
+          "x-github-media-type": "github.v3; format=json",
+          "x-oauth-scopes": "gist, read:org, repo, workflow",
+          "x-ratelimit-limit": "5000",
+          "x-ratelimit-remaining": "4990",
+          "x-ratelimit-reset": "1789280328",
+          "x-ratelimit-resource": "core",
+          "x-ratelimit-used": "10"
+        },
+        "body": ""
+      }
+    }
+  ]
+}

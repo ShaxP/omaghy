@@ -29,6 +29,14 @@
 //! responses; **no test in this crate opens a socket** (`spec/00-overview.md`
 //! §7). See [`cassette`].
 //!
+//! # Surfaces
+//!
+//! On top of that transport sit the endpoint modules — one per surface, each
+//! owning the translation from GitHub's wire shapes into `omaghy-model`. So
+//! far that is [`notifications`]: the conditional poll, the `SubjectRef`
+//! parsed from an API URL, one batched GraphQL query that enriches a whole
+//! page, and marking threads read.
+//!
 //! # Getting a client
 //!
 //! ```no_run
@@ -49,6 +57,7 @@ pub mod client;
 pub mod conditional;
 mod error;
 pub mod graphql;
+pub mod notifications;
 pub mod ratelimit;
 pub mod reqwest_transport;
 pub mod retry;
@@ -60,7 +69,10 @@ pub use client::{
     RestResponse,
 };
 pub use conditional::{Conditional, Validators};
-pub use graphql::{GraphQlError, GraphQlRequest, RateLimitField};
+pub use graphql::{GraphQlError, GraphQlRequest, Partial, RateLimitField};
+pub use notifications::{
+    ENRICHMENT_BATCH, MAX_PER_PAGE, NotificationFilter, NotificationPage, Notifications,
+};
 pub use ratelimit::{Budget, Clock, Governor, POLL_INTERVAL_FLOOR, RateLimits, Resource};
 pub use reqwest_transport::{ReqwestTransport, install_crypto_provider};
 pub use retry::{RealSleeper, RetryPolicy, Sleeper};
