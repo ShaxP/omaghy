@@ -16,8 +16,9 @@ use omaghy_api::{
     TransportError, Validators,
 };
 use omaghy_model::{
-    Enrichment, LimitKind, Notification, NotificationId, NotificationReason, PrDisplayStatus,
-    RepoRef, RollupState, StoreError, SubjectId, SubjectKind, SubjectRef,
+    Enrichment, IssueDisplayStatus, LimitKind, Notification, NotificationId, NotificationReason,
+    PrDisplayStatus, RepoRef, RollupState, StoreError, SubjectId, SubjectKind, SubjectRef,
+    SubjectStatus,
 };
 use std::sync::Arc;
 use time::macros::datetime;
@@ -360,10 +361,13 @@ async fn one_query_enriches_a_whole_page() {
     );
 
     let detail = items[0].detail.ready().expect("enriched");
-    assert_eq!(detail.number, 61);
+    assert_eq!(detail.number, Some(61));
     // `PrState`'s SCREAMING_SNAKE_CASE meets a real GraphQL response here:
     // GitHub answered `"MERGED"`.
-    assert_eq!(detail.status, PrDisplayStatus::Merged);
+    assert_eq!(
+        detail.status,
+        SubjectStatus::PullRequest(PrDisplayStatus::Merged)
+    );
     assert_eq!(detail.html_url, "https://github.com/ShaxP/shax/pull/61");
     assert_eq!(detail.checks.state, RollupState::Success);
 
@@ -518,8 +522,11 @@ async fn two_rows_naming_one_subject_ask_about_it_once() {
 
     for n in &items {
         let detail = n.detail.ready().expect("both rows are enriched");
-        assert_eq!(detail.number, 7);
-        assert_eq!(detail.status, PrDisplayStatus::Open);
+        assert_eq!(detail.number, Some(7));
+        assert_eq!(
+            detail.status,
+            SubjectStatus::Issue(IssueDisplayStatus::Open)
+        );
         assert_eq!(
             detail.checks.state,
             RollupState::None,

@@ -255,13 +255,28 @@ pub struct Notification {
 }
 
 pub struct SubjectDetail {          // one batched GraphQL query fills a whole page
-    pub number: u64,
-    pub status: PrDisplayStatus,
+    pub number: Option<u64>,        // None for a SHA-addressed subject
+    pub status: SubjectStatus,
     pub checks: CheckRollup,
     pub last_actor: Option<Actor>,
     pub html_url: Url,
 }
+
+pub enum SubjectStatus {
+    PullRequest(PrDisplayStatus),
+    Issue(IssueDisplayStatus),
+    None,                           // a commit, a release, a check suite, a discussion
+}
 ```
+
+> **Corrected after W2.1.** `number: u64` and `status: PrDisplayStatus` could
+> not describe two of the seven subject kinds, so a commit was recorded as
+> `Enrichment::Failed` purely to stop it being re-fetched — one state doing the
+> work of two, and an ordinary subject rendered as broken. `Enrichment` gains
+> `NotApplicable`, and `SubjectStatus` says "no state" without inventing one.
+> `SubjectStatus` has no `Discussion` variant on purpose: the enrichment query
+> does not ask for `isAnswered`, and a variant whose data nobody fetches only
+> invites it to be invented.
 
 `Enrichment` is what makes the two-phase paint honest: a row renders from
 `Absent`/`Pending` on the first frame and re-renders on `Ready` **without

@@ -39,7 +39,9 @@ pub use error::{AuthError, CacheError, LimitKind, Result, StoreError};
 pub use ids::{NodeId, NotificationId, SubjectId, SubjectKind, SubjectRef};
 pub use issue::{Issue, IssueDisplayStatus, IssueState, IssueStateReason};
 pub use label::{Label, Rgb};
-pub use notification::{Enrichment, Notification, NotificationReason, SubjectDetail};
+pub use notification::{
+    Enrichment, Notification, NotificationReason, SubjectDetail, SubjectStatus,
+};
 pub use pull_request::{Mergeable, PrDisplayStatus, PrState, PullRequest};
 pub use repo::{Repo, RepoRef};
 pub use review::{ReviewDecision, ReviewState, ReviewSummary};

@@ -516,9 +516,9 @@ fragment DiscussionFields on Discussion {
 mod wire {
     use super::{Target, alias_missing};
     use omaghy_model::{
-        Actor, CheckRollup, Enrichment, IssueState, NotificationId, NotificationReason,
-        PrDisplayStatus, PrState, RepoRef, RollupState, StatusState, SubjectDetail, SubjectKind,
-        SubjectRef,
+        Actor, CheckRollup, Enrichment, IssueDisplayStatus, IssueState, NotificationId,
+        NotificationReason, PrDisplayStatus, PrState, RepoRef, RollupState, StatusState,
+        SubjectDetail, SubjectKind, SubjectRef, SubjectStatus,
     };
     use serde::Deserialize;
     use serde_json::Value;
@@ -788,8 +788,8 @@ mod wire {
                 comments,
                 commits,
             } => SubjectDetail {
-                number,
-                status: display_status(state, is_draft),
+                number: Some(number),
+                status: SubjectStatus::PullRequest(display_status(state, is_draft)),
                 checks: rollup(&commits),
                 last_actor: last_actor(comments, author),
                 html_url: url,
@@ -801,11 +801,13 @@ mod wire {
                 author,
                 comments,
             } => SubjectDetail {
-                number,
-                status: match state {
-                    IssueState::Open => PrDisplayStatus::Open,
-                    IssueState::Closed => PrDisplayStatus::Closed,
-                },
+                number: Some(number),
+                status: SubjectStatus::Issue(match state {
+                    IssueState::Open => IssueDisplayStatus::Open,
+                    // The enrichment query does not ask for `stateReason`, so
+                    // "closed" is all we know — not that it was completed.
+                    IssueState::Closed => IssueDisplayStatus::Completed,
+                }),
                 checks: CheckRollup::empty(),
                 last_actor: last_actor(comments, author),
                 html_url: url,
@@ -816,11 +818,11 @@ mod wire {
                 author,
                 comments,
             } => SubjectDetail {
-                number,
-                // A discussion is neither open nor closed in the sense
-                // `PrDisplayStatus` names; `Open` is the least wrong of four
-                // wrong answers. See the contract note in the PR.
-                status: PrDisplayStatus::Open,
+                number: Some(number),
+                // A discussion has no state this query fetches, and
+                // `SubjectStatus::None` says so instead of picking the least
+                // wrong of four wrong answers.
+                status: SubjectStatus::None,
                 checks: CheckRollup::empty(),
                 last_actor: last_actor(comments, author),
                 html_url: url,
@@ -898,7 +900,9 @@ fn alias_missing(target: &Target) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use omaghy_model::{NotificationReason, PrDisplayStatus, RollupState, SubjectRef};
+    use omaghy_model::{
+        NotificationReason, PrDisplayStatus, RollupState, SubjectRef, SubjectStatus,
+    };
 
     // ---- the path a filter fetches ---------------------------------------
 
@@ -1117,6 +1121,10 @@ mod tests {
         };
         let d = wire::detail_from(node, &target).unwrap();
         assert_eq!(d.checks.state, RollupState::None);
-        assert_eq!(d.status, PrDisplayStatus::Draft, "draft is not a state");
+        assert_eq!(
+            d.status,
+            SubjectStatus::PullRequest(PrDisplayStatus::Draft),
+            "draft is not a state"
+        );
     }
 }

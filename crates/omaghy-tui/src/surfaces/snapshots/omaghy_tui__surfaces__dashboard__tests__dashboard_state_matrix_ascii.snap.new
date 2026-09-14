@@ -1,5 +1,6 @@
 ---
 source: crates/omaghy-tui/src/surfaces/dashboard.rs
+assertion_line: 917
 expression: "state_matrix(Icons::ASCII).await"
 ---
 ── cold · Dashboard  not fetched ──

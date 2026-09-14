@@ -22,7 +22,7 @@ use omaghy_model::{
     NodeId, Notification, NotificationId, NotificationReason, PrDisplayStatus, PrState,
     PullRequest, Reactions, Repo, RepoRef, Result, ReviewDecision, ReviewState, ReviewSummary, Rgb,
     RollupState, SpanStyle, StatusState, StoreError, StyledSpan, SubjectDetail, SubjectId,
-    SubjectKind, SubjectRef, TimelineEvent, TimelineKind,
+    SubjectKind, SubjectRef, SubjectStatus, TimelineEvent, TimelineKind,
 };
 use omaghy_store::{
     Fresh, RefreshTarget, Source, Store, StoreEvent, Viewer,
@@ -1109,8 +1109,8 @@ fn rollup() -> CheckRollup {
 
 fn subject_detail() -> SubjectDetail {
     SubjectDetail {
-        number: 61,
-        status: PrDisplayStatus::Merged,
+        number: Some(61),
+        status: SubjectStatus::PullRequest(PrDisplayStatus::Merged),
         checks: rollup(),
         last_actor: Some(actor()),
         html_url: "https://github.com/ShaxP/shax/pull/61".into(),

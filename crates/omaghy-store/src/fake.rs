@@ -136,6 +136,23 @@ impl FakeStore {
             .refreshing(b.refreshing)
     }
 
+    /// A plausible count for a dashboard query, without executing one.
+    fn count_for(rows: &[Notification], query: &str) -> u32 {
+        use omaghy_model::NotificationReason as R;
+        let n = |f: fn(&Notification) -> bool| rows.iter().filter(|r| f(r)).count() as u32;
+        if query.contains("review-requested") {
+            n(|r| r.reason == R::ReviewRequested)
+        } else if query.contains("author:") {
+            n(|r| r.reason == R::Author && r.unread)
+        } else if query.contains("assignee:") {
+            n(|r| r.reason == R::Assign)
+        } else if query.contains("mentions:") {
+            n(|r| matches!(r.reason, R::Mention | R::TeamMention))
+        } else {
+            n(|r| r.unread)
+        }
+    }
+
     fn matches(n: &Notification, q: &NotificationQuery) -> bool {
         if q.read == ReadFilter::UnreadOnly && !n.unread {
             return false;
@@ -191,9 +208,16 @@ impl Store for FakeStore {
                 count: if empty {
                     0
                 } else {
-                    // Enough signal to render distinct sections without
-                    // pretending to execute GitHub search syntax.
-                    rows.iter().filter(|n| n.reason.is_directed_at_me()).count() as u32
+                    // Derived from the section's own query, so sections differ
+                    // from one another — a dashboard where every section reads
+                    // the same number cannot show what a real one looks like,
+                    // and W2.2 had to hand-build the mixed case for its tests.
+                    //
+                    // Still not GitHub search syntax: it matches on the words
+                    // the default queries actually use, which is enough to make
+                    // the fake's sections distinguishable and honest about
+                    // being a fake.
+                    Self::count_for(&rows, &s.query)
                 },
             })
             .collect();
@@ -274,6 +298,12 @@ impl Store for FakeStore {
 ///
 /// Covers every reason, seven subject kinds, ages from four minutes to four
 /// hundred days, rows still awaiting enrichment, and a row with no avatar.
+///
+/// **Read and unread rows interleave by age**, which a real inbox does because
+/// people read things out of order. The first version of this corpus made
+/// every unread row newer than every read one — tidy, unrealistic, and it made
+/// `triage = sink` produce exactly the recency order already on screen, so two
+/// triage modes were indistinguishable until you pressed a key.
 pub fn corpus() -> Vec<Notification> {
     use NotificationReason as R;
     use SubjectKind as K;
@@ -388,7 +418,7 @@ pub fn corpus() -> Vec<Notification> {
             R::Author,
             "ShaxP/shax",
             K::PullRequest,
-            1_680,
+            15,
             "M7 slice 1: light theme + Dark/Light/System toggle",
             true,
         ),
@@ -428,7 +458,7 @@ pub fn corpus() -> Vec<Notification> {
             R::StateChange,
             "basecamp/omarchy",
             K::Issue,
-            4_860,
+            200,
             "Theme switcher should preview before applying",
             true,
         ),
@@ -518,7 +548,7 @@ pub fn corpus() -> Vec<Notification> {
             R::Comment,
             "ShaxP/clipboard-sharing-mac-omarchy",
             K::Commit,
-            30_240,
+            500,
             "Handle wl-paste MIME negotiation on macOS bridge",
             true,
         ),
