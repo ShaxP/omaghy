@@ -1413,6 +1413,7 @@ dependencies = [
  "omaghy-sync",
  "omaghy-tui",
  "serde",
+ "time",
  "tokio",
  "toml",
  "tracing",
@@ -1477,6 +1478,7 @@ dependencies = [
 name = "omaghy-sync"
 version = "0.0.0"
 dependencies = [
+ "async-trait",
  "omaghy-api",
  "omaghy-cache",
  "omaghy-model",

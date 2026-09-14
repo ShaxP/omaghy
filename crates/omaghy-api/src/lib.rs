@@ -62,6 +62,7 @@ pub mod ratelimit;
 pub mod reqwest_transport;
 pub mod retry;
 pub mod transport;
+pub mod viewer;
 
 pub use auth::{ResolvedToken, Token, TokenSource, resolve_token};
 pub use client::{
@@ -77,3 +78,4 @@ pub use ratelimit::{Budget, Clock, Governor, POLL_INTERVAL_FLOOR, RateLimits, Re
 pub use reqwest_transport::{ReqwestTransport, install_crypto_provider};
 pub use retry::{RealSleeper, RetryPolicy, Sleeper};
 pub use transport::{Headers, HttpRequest, HttpResponse, Method, Transport, TransportError};
+pub use viewer::viewer_login;

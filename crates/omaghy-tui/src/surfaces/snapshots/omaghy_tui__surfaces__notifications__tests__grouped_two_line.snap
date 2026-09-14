@@ -5,39 +5,39 @@ expression: out
 ── grouped · two-line ──
    quickshell/quickshell (2)
 ▸  Add SocketServer reconnect backoff and idle timeout                                          4m
-     review requested · pull request #1
+     review requested · pull request #1 · pr
    Refactor the Wayland layer-shell surface lifecycle so that anchors, exclusive zones, and …   8h
-     subscribed · pull request #8
+     subscribed · pull request #8 · pr
    some-very-long-organization-name/an-equally-long-repository-name (3)
    Short one                                                                                    9m
-     commented · issue #29
+     commented · issue #29 · issue
    RFC: unifying the plugin manifest across shell surfaces                                      6h
-     team mentioned · discussion #7
+     team mentioned · discussion #7 · disc
     Tracking: plugin manifest schemaVersion 2                                                   1mo
-     manual · issue #25
+     manual · issue #25 · issue
    ShaxP/shax (15)
     M7 slice 1: light theme + Dark/Light/System toggle                                          15m
-     author · pull request #11
+     author · pull request #11 · pr
    CI failed on main                                                                           41m
-     ci · check suite #3
+     ci · check suite #3 · checks
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting details
 
 ── grouped · two-line · ascii ──
    quickshell/quickshell (2)
 ▸  Add SocketServer reconnect backoff and idle timeout                                          4m
-     review requested · pull request #1
+     review requested · pull request #1 · pr
    Refactor the Wayland layer-shell surface lifecycle so that anchors, exclusive zones, and …   8h
-     subscribed · pull request #8
+     subscribed · pull request #8 · pr
    some-very-long-organization-name/an-equally-long-repository-name (3)
    Short one                                                                                    9m
-     commented · issue #29
+     commented · issue #29 · issue
    RFC: unifying the plugin manifest across shell surfaces                                      6h
-     team mentioned · discussion #7
+     team mentioned · discussion #7 · disc
     Tracking: plugin manifest schemaVersion 2                                                   1mo
-     manual · issue #25
+     manual · issue #25 · issue
    ShaxP/shax (15)
     M7 slice 1: light theme + Dark/Light/System toggle                                          15m
-     author · pull request #11
+     author · pull request #11 · pr
    CI failed on main                                                                           41m
-     ci · check suite #3
+     ci · check suite #3 · checks
  ▸ review requested · pull request #1 · quickshell/quickshell · 4m · awaiting details
