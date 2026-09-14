@@ -112,13 +112,31 @@ async fn real_store() -> Result<Arc<dyn Store>> {
     tracing::info!(%login, "authenticated");
 
     let syncer = Syncer::new(client);
-    let store = Arc::new(
-        SqliteStore::open(cache_path()?, Viewer::new(login))
-            .context("could not open the cache")?
-            .with_remote(syncer.clone()),
-    );
+    let store =
+        Arc::new(open_cache(&cache_path()?, Viewer::new(login))?.with_remote(syncer.clone()));
     syncer.attach(&store);
     Ok(store)
+}
+
+/// Open the cache, tolerating one that has to be rebuilt on the way in.
+///
+/// `Cache::open` rebuilds a corrupt file *and still returns the error*, so a
+/// caller holding rows from the file just deleted learns they are stale
+/// (`spec/20-store.md` §3.2). At startup nobody holds anything, and refusing
+/// to launch over a cache we have already replaced is the wrong answer — a
+/// half-deleted `cache.db` made omaghy exit before drawing a frame.
+fn open_cache(path: &std::path::Path, viewer: Viewer) -> Result<SqliteStore> {
+    use omaghy_model::{CacheError, StoreError};
+
+    match SqliteStore::open(path, viewer.clone()) {
+        Ok(store) => Ok(store),
+        Err(StoreError::Cache(CacheError::Corrupt(why))) => {
+            tracing::warn!(%why, "cache was unusable and has been rebuilt");
+            // The rebuild has already happened; this opens what it left.
+            SqliteStore::open(path, viewer).context("could not open the rebuilt cache")
+        }
+        Err(e) => Err(e).context("could not open the cache"),
+    }
 }
 
 /// `$XDG_CACHE_HOME/omaghy/cache.db`.
