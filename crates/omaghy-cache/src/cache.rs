@@ -67,34 +67,11 @@ impl EntityKind {
 
 /// Conditional-request validators, stored beside the data they validate.
 ///
-/// `spec/20-store.md` §4: a 304 costs no REST rate limit, so these are what
-/// makes aggressive polling cheap. They are written by whoever fetched and
-/// read back by whoever fetches next.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Validators {
-    pub etag: Option<String>,
-    pub last_modified: Option<String>,
-}
-
-impl Validators {
-    pub fn etag(tag: impl Into<String>) -> Self {
-        Self {
-            etag: Some(tag.into()),
-            last_modified: None,
-        }
-    }
-
-    pub fn last_modified(at: impl Into<String>) -> Self {
-        Self {
-            etag: None,
-            last_modified: Some(at.into()),
-        }
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.etag.is_none() && self.last_modified.is_none()
-    }
-}
+/// The type is `omaghy-model`'s: `omaghy-api` harvests them from a response
+/// and this crate persists them, so it belongs to the vocabulary both speak
+/// rather than to either one. It is re-exported here because every caller of
+/// [`Cache`] needs it, and `spec/20-store.md` §4 is where it is specified.
+pub use omaghy_model::Validators;
 
 /// What we know about a stored list as a whole, as opposed to its members.
 #[derive(Debug, Clone, PartialEq, Eq)]

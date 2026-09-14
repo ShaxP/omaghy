@@ -318,7 +318,37 @@ a language name.
 
 ---
 
-## 4. What the model deliberately omits
+## 4. Provenance — validators
+
+`Validators` is the ETag and `Last-Modified` pair stored beside whatever they
+validate. A 304 costs no REST rate limit, so storing one and always sending it
+is what makes polling affordable; `20-store.md` §4 specifies the behaviour.
+
+```rust
+pub struct Validators {
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
+}
+```
+
+**It is in the model because it crosses a boundary nothing else does.**
+`omaghy-api` harvests it from a response and `omaghy-cache` persists it, and
+neither crate may depend on the other. Both defined it independently during
+Wave 1 — identically, by luck — and integration then needed four lines in
+`omaghy-sync` to convert between two structurally identical types. That is the
+duplication this crate exists to prevent (`90-plan.md` §8), and the lucky part
+is the warning: the next such pair will not agree.
+
+Principle 1 still holds. What lives here is the *value*; turning it into
+`If-None-Match` and `If-Modified-Since`, or reading it back off a response, is
+HTTP and stays in `omaghy-api`, which extends the type rather than owning it.
+Both strings are opaque — `Last-Modified` is echoed verbatim and never parsed,
+which is what the HTTP spec requires and what keeps a date format out of the
+one place it would bite.
+
+---
+
+## 5. What the model deliberately omits
 
 Projects/ProjectsV2, milestones beyond a title, Discussions beyond the
 notification subject, wikis, packages, releases beyond a name, gists, and
@@ -327,7 +357,7 @@ that renders it.
 
 ---
 
-## 5. Cache implications
+## 6. Cache implications
 
 For `omaghy-cache` (specified separately):
 

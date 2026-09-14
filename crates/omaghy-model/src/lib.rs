@@ -29,6 +29,7 @@ pub mod pull_request;
 pub mod repo;
 pub mod review;
 pub mod timeline;
+pub mod validators;
 
 pub use actor::Actor;
 pub use checks::{
@@ -46,3 +47,4 @@ pub use pull_request::{Mergeable, PrDisplayStatus, PrState, PullRequest};
 pub use repo::{Repo, RepoRef};
 pub use review::{ReviewDecision, ReviewState, ReviewSummary};
 pub use timeline::{Reactions, TimelineEntry, TimelineEvent, TimelineKind};
+pub use validators::Validators;
