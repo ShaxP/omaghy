@@ -93,3 +93,15 @@ mod tests {
         assert_eq!(bucket(NOW - Duration::days(400), NOW), AgeBucket::Older);
     }
 }
+
+#[cfg(test)]
+mod deliberate_failure {
+    /// Fails on purpose, to make CI red and produce a `ci_activity`
+    /// notification — omaghy has never rendered one from live data.
+    ///
+    /// Delete this test and the branch once the notification arrives.
+    #[test]
+    fn this_test_is_meant_to_fail() {
+        assert_eq!(2 + 2, 5, "deliberate: generating a CI failure notification");
+    }
+}
