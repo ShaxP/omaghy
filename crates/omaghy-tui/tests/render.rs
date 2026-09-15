@@ -150,3 +150,89 @@ async fn the_highlight_lands_on_the_cursor_row() {
         "exactly the first list row — both its lines — should be highlighted"
     );
 }
+
+/// Configuration reaches the screen, not just the struct.
+///
+/// `App::with_config` → `Ctx` → `surfaces::build` → the surface's own state is
+/// four hops, and a break anywhere in it leaves a config file that parses
+/// perfectly and changes nothing. Asserting on the rendered buffer is the only
+/// way to know the whole chain ran.
+#[tokio::test]
+async fn a_configured_dashboard_section_reaches_the_screen() {
+    use omaghy_store::query::{DashboardConfig, DashboardSection};
+    use omaghy_tui::surfaces::notifications::Variants;
+
+    let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+    let cfg = DashboardConfig {
+        sections: vec![DashboardSection {
+            title: "Only mine".into(),
+            query: "is:open is:pr author:@me".into(),
+            limit: 5,
+        }],
+    };
+
+    let mut app =
+        App::new(store, omaghy_store::fake::FIXTURE_NOW).with_config(Variants::default(), cfg);
+    app.start(Route::surface(SurfaceId::Dashboard))
+        .await
+        .expect("surface loads");
+    let mut t = Terminal::new(TestBackend::new(100, 12)).unwrap();
+    t.draw(|f| app.render(f)).unwrap();
+    let out = (0..t.backend().buffer().area.height)
+        .map(|y| {
+            (0..t.backend().buffer().area.width)
+                .map(|x| t.backend().buffer()[(x, y)].symbol())
+                .collect::<String>()
+        })
+        .collect::<Vec<_>>()
+        .join("\n");
+
+    assert!(
+        out.contains("Only mine"),
+        "the configured section should be on screen, got:\n{out}"
+    );
+    assert!(
+        !out.contains("Needs my review"),
+        "the default sections were replaced, not added to:\n{out}"
+    );
+}
+
+/// The same for the inbox: `rows = "one-line"` must change what is drawn.
+#[tokio::test]
+async fn a_configured_row_height_reaches_the_screen() {
+    use omaghy_store::query::DashboardConfig;
+    use omaghy_tui::surfaces::notifications::{RowMode, Variants};
+
+    async fn inbox(rows: RowMode) -> String {
+        let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+        let variants = Variants {
+            rows,
+            ..Variants::default()
+        };
+        let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+            .with_config(variants, DashboardConfig::default());
+        app.start(Route::surface(SurfaceId::Notifications))
+            .await
+            .expect("surface loads");
+        let mut t = Terminal::new(TestBackend::new(100, 12)).unwrap();
+        t.draw(|f| app.render(f)).unwrap();
+        let buf = t.backend().buffer().clone();
+        (0..buf.area.height)
+            .map(|y| {
+                (0..buf.area.width)
+                    .map(|x| buf[(x, y)].symbol())
+                    .collect::<String>()
+                    .trim_end()
+                    .to_owned()
+            })
+            .collect::<Vec<_>>()
+            .join("\n")
+    }
+
+    let one = inbox(RowMode::OneLine).await;
+    let two = inbox(RowMode::TwoLine).await;
+    assert_ne!(
+        one, two,
+        "the row height is configurable, so the two must not draw the same"
+    );
+}

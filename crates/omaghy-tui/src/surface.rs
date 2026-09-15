@@ -18,12 +18,20 @@ use time::OffsetDateTime;
 /// What a surface is given. Deliberately small: a surface that needs more is
 /// usually a surface doing something the model should.
 ///
-/// Cheap to clone — an `Arc` and a `Copy` timestamp — which is how the app
+/// Cheap to clone — `Arc`s, a `Copy` timestamp and a handful of enums — which
+/// is how the app
 /// hands it to a surface while still holding `&mut self`.
 #[derive(Clone)]
 pub struct Ctx {
     pub store: Arc<dyn Store>,
     pub now: OffsetDateTime,
+    /// How the inbox draws itself (`40-config.md` §2 `[notifications]`).
+    /// Read once at startup and handed to each surface as it is built — the
+    /// settings surface (§6) will rebuild them when it changes one.
+    pub inbox: crate::surfaces::notifications::Variants,
+    /// The dashboard's sections (§2 `[dashboard]`). The same value the syncer
+    /// counts, so the screen cannot show sections nothing fetches.
+    pub dashboard: Arc<omaghy_store::query::DashboardConfig>,
     /// Resolved once, at startup, from what the terminal and font can draw.
     /// Not a preference — `40-config.md` §3 — but a surface still needs it,
     /// and hardcoding `Unicode` in each one made the fallback unreachable.
@@ -39,6 +47,21 @@ impl std::fmt::Debug for Ctx {
 }
 
 impl Ctx {
+    /// A context carrying the default configuration.
+    ///
+    /// The configured one comes from `App::with_config`; this is what the
+    /// app builds before it, and what tests use when the setting under test
+    /// is not a configured one.
+    pub fn new(store: Arc<dyn Store>, now: OffsetDateTime, icons: Icons) -> Self {
+        Self {
+            store,
+            now,
+            inbox: crate::surfaces::notifications::Variants::default(),
+            dashboard: Arc::new(omaghy_store::query::DashboardConfig::default()),
+            icons,
+        }
+    }
+
     pub fn viewer(&self) -> &Viewer {
         self.store.viewer()
     }

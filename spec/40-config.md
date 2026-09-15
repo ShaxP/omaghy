@@ -18,6 +18,12 @@ wrong trade for a program someone opens to check whether CI passed.
 value, and the accepted set. `reason = "glif"` must say so; it must not
 silently render nothing.
 
+**A setting nobody applies says so.** `[keys]` is in §2's file and rebinding is
+unbuilt, so the reader reports it as not yet applied rather than accepting it
+silently. A config that appears to work and does not is worse than one that
+refuses — and this is the only honest middle ground while the file documents
+more than the code does.
+
 **Config is read once, at startup.** Live reload is not a goal. `omaghy` starts
 in milliseconds; restarting it is cheaper than watching a file. The one
 exception is a change made from the settings surface (§6), which applies at
@@ -99,6 +105,24 @@ dashboard     = 300
 "app.quit"                  = ["q", "ctrl-c"]
 ```
 
+### 2.1 What building the reader found
+
+The file above is normative and the code now matches it. It did not before:
+three of the five `[notifications]` settings had internal names that disagreed
+with the vocabulary this section documents — `rows` answered `2-line` where §2
+says `two-line`, and `repo` answered `owner` and `shared` for `elide-owner` and
+`hide-when-shared`. Nothing noticed because nothing read the file, so the
+labels were only ever displayed, never matched.
+
+They are now generated from one table alongside each enum, so §2's vocabulary,
+what the settings surface offers, and what the reader accepts cannot drift
+again. `the_documented_file_parses_to_the_documented_defaults` pins this
+section's example to the code in both directions.
+
+**The reader parses by hand rather than deriving `Deserialize`.** Serde offers
+two behaviours for an unknown key — ignore it silently, or fail the file — and
+§1 asks for the third.
+
 ---
 
 ## 3. What is deliberately not configurable
@@ -126,6 +150,13 @@ inherits it. There is no palette section; see `00-overview.md` §5.
 For any setting: **command-line flag → environment variable → config file →
 default.** Only a few settings have flags or variables; the chain exists so
 that adding one later does not change where anything else comes from.
+
+Built: the route omaghy opens follows it, and the error names which step
+supplied a bad value — `` `nonsense` (`default-route` in config.toml) is not a
+route `` rather than a bare complaint about a word the user never typed. That
+is the same problem §6.1 names for the settings surface, met first here.
+`--config` / `OMAGHY_CONFIG` redirects which file is read, so the log line
+names the file actually read and never the default one.
 
 `OMAGHY_TOKEN` and `GH_TOKEN` sit in this chain at the environment step, and
 there is deliberately no `[auth]` section: omaghy never stores a credential
@@ -164,6 +195,15 @@ the column does not repeat it; `repo` governs ungrouped views.
 Editing a TOML file is a poor way to discover that an option exists. Every
 setting in §2 is therefore reachable from a **settings surface** inside omaghy,
 and that surface is how most people will change them.
+
+**Not built.** The reader is (§2.1); this surface is not. Everything below is
+still specification.
+
+The one thing the reader settled for it: `parse` is a pure function of a
+string, living in the `omaghy` binary. The surface will need to read *and
+write* the file from inside `omaghy-tui`, which cannot see that module — so
+moving it is a contract change for the PR that builds this, and deliberately a
+cheap one.
 
 **Reached by `,`, and from the command palette.** Deliberately *not* one of the
 numbered surfaces: `1`–`7` address the seven content surfaces of

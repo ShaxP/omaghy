@@ -107,18 +107,6 @@ pub enum ReasonMode {
     Hidden,
 }
 
-impl ReasonMode {
-    /// The value as `40-config.md` §2 names it. Public because the
-    /// settings surface (§6) shows the current value of each setting.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Glyph => "glyph",
-            Self::Text => "text",
-            Self::Hidden => "none",
-        }
-    }
-}
-
 /// `p` — `ShaxP/shax` fourteen times in a column is measured noise (§9).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum RepoMode {
@@ -130,18 +118,6 @@ pub enum RepoMode {
     /// Also drop the column entirely when every visible row shares one
     /// repository, naming it in the header instead. §9's full stack.
     HiddenWhenShared,
-}
-
-impl RepoMode {
-    /// The value as `40-config.md` §2 names it. Public because the
-    /// settings surface (§6) shows the current value of each setting.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Full => "full",
-            Self::OwnerElided => "owner",
-            Self::HiddenWhenShared => "shared",
-        }
-    }
 }
 
 /// `w` — which column would you rather lose first?
@@ -194,15 +170,6 @@ pub enum RowMode {
 }
 
 impl RowMode {
-    /// The value as `40-config.md` §2 names it. Public because the
-    /// settings surface (§6) shows the current value of each setting.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::OneLine => "1-line",
-            Self::TwoLine => "2-line",
-        }
-    }
-
     fn height(self) -> usize {
         match self {
             Self::OneLine => 1,
@@ -227,18 +194,6 @@ pub enum TriageMode {
     Sink,
 }
 
-impl TriageMode {
-    /// The value as `40-config.md` §2 names it. Public because the
-    /// settings surface (§6) shows the current value of each setting.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Grey => "grey",
-            Self::Hide => "hide",
-            Self::Sink => "sink",
-        }
-    }
-}
-
 /// `g` — the strongest candidate fix for repeated repository names.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum GroupMode {
@@ -247,16 +202,51 @@ pub enum GroupMode {
     ByRepo,
 }
 
-impl GroupMode {
-    /// The value as `40-config.md` §2 names it. Public because the
-    /// settings surface (§6) shows the current value of each setting.
-    pub fn label(self) -> &'static str {
-        match self {
-            Self::Flat => "flat",
-            Self::ByRepo => "by-repo",
+/// `label` ↔ value, plus the accepted list, for every setting whose value is
+/// one of a fixed set of words.
+///
+/// Generated rather than written out five times because three things have to
+/// agree and must not drift: `40-config.md` §2's vocabulary, what the settings
+/// surface (§6) offers, and what the config reader accepts. They had already
+/// drifted before anything read them — `rows` answered `2-line` where §2 says
+/// `two-line`, and `repo` answered `owner` and `shared` for `elide-owner` and
+/// `hide-when-shared`. Nothing noticed, because no reader existed to disagree.
+macro_rules! labelled {
+    ($t:ty { $($v:ident => $s:literal),+ $(,)? }) => {
+        impl $t {
+            /// Every value, in the order the settings surface cycles them.
+            pub const ALL: &'static [Self] = &[$(Self::$v),+];
+
+            /// The value as `40-config.md` §2 names it.
+            pub fn label(self) -> &'static str {
+                match self {
+                    $(Self::$v => $s),+
+                }
+            }
+
+            /// Parse §2's vocabulary. `None` means "not one of ours", which
+            /// the caller reports alongside [`Self::labels`].
+            pub fn from_label(s: &str) -> Option<Self> {
+                Self::ALL.iter().copied().find(|v| v.label() == s)
+            }
+
+            /// The accepted values, for a message that names them.
+            pub fn labels() -> Vec<&'static str> {
+                Self::ALL.iter().map(|v| v.label()).collect()
+            }
         }
-    }
+    };
 }
+
+labelled!(ReasonMode { Glyph => "glyph", Text => "text", Hidden => "none" });
+labelled!(RepoMode {
+    Full => "full",
+    OwnerElided => "elide-owner",
+    HiddenWhenShared => "hide-when-shared",
+});
+labelled!(RowMode { TwoLine => "two-line", OneLine => "one-line" });
+labelled!(TriageMode { Grey => "grey", Sink => "sink", Hide => "hide" });
+labelled!(GroupMode { ByRepo => "by-repo", Flat => "flat" });
 
 /// The seven switches. `Default` is exactly `spec/30-ui.md` §9's hypothesis,
 /// so the surface opens on what the spec currently claims and every keypress
@@ -482,6 +472,13 @@ pub struct Notifications {
 }
 
 impl Notifications {
+    /// How to draw (`40-config.md` §2 `[notifications]`).
+    #[must_use]
+    pub fn with_variants(mut self, variants: Variants) -> Self {
+        self.variants = variants;
+        self
+    }
+
     pub fn new() -> Self {
         Self::default()
     }
@@ -1314,11 +1311,7 @@ mod tests {
     // ------------------------------------------------------------ harness
 
     fn ctx(store: FakeStore) -> Ctx {
-        Ctx {
-            store: Arc::new(store),
-            now: FIXTURE_NOW,
-            icons: Icons::new(IconMode::Unicode),
-        }
+        Ctx::new(Arc::new(store), FIXTURE_NOW, Icons::new(IconMode::Unicode))
     }
 
     /// The store, loaded once, exactly as the router would.
@@ -1723,11 +1716,7 @@ mod tests {
         // this state different from having nothing, and what proves the
         // surface keeps the page it already read.
         let cached = Arc::new(FakeStore::with_corpus());
-        let wctx = Ctx {
-            store: cached.clone(),
-            now: FIXTURE_NOW,
-            icons: Icons::new(IconMode::Unicode),
-        };
+        let wctx = Ctx::new(cached.clone(), FIXTURE_NOW, Icons::new(IconMode::Unicode));
         let mut with_cache = Notifications::new();
         with_cache.load(&wctx).await.unwrap();
         cached.set_behaviour(Behaviour::failing(StoreError::Offline(

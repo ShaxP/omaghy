@@ -1,5 +1,6 @@
 //! The app shell: navigation stack, event loop, global keys, layout.
 
+use crate::surfaces::notifications::Variants;
 use crate::{
     keys::{self, GLOBAL_BINDINGS, Global},
     route::{Route, SurfaceId},
@@ -11,7 +12,7 @@ use crate::{
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt as _;
 use omaghy_model::Result;
-use omaghy_store::{RefreshTarget, Store, StoreEvent};
+use omaghy_store::{RefreshTarget, Store, StoreEvent, query::DashboardConfig};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -71,7 +72,7 @@ impl App {
             std::env::var("TERM").ok().as_deref(),
             std::env::var("LANG").ok().as_deref(),
         ));
-        let ctx = Ctx { store, now, icons };
+        let ctx = Ctx::new(store, now, icons);
         Self {
             stack: Vec::new(),
             ctx,
@@ -81,6 +82,18 @@ impl App {
             status: None,
             progress: None,
         }
+    }
+
+    /// Apply the configuration read at startup (`40-config.md` §1).
+    ///
+    /// Before `start`, because a surface takes its configuration when it is
+    /// built. Separate from [`App::new`] so that the hundred tests which do
+    /// not care about configuration keep a one-line constructor.
+    #[must_use]
+    pub fn with_config(mut self, inbox: Variants, dashboard: DashboardConfig) -> Self {
+        self.ctx.inbox = inbox;
+        self.ctx.dashboard = Arc::new(dashboard);
+        self
     }
 
     pub async fn start(&mut self, route: Route) -> Result<()> {
@@ -108,7 +121,7 @@ impl App {
         if let Some(e) = self.stack.last_mut() {
             e.surface.on_leave(&self.ctx);
         }
-        let mut surface = surfaces::build(&route);
+        let mut surface = surfaces::build(&route, &self.ctx);
         surface.on_enter(&self.ctx);
         surface.load(&self.ctx).await?;
         self.stack.push(Entry {
