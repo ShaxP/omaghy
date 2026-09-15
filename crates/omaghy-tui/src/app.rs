@@ -219,9 +219,21 @@ impl App {
             self.dirty = true;
         }
         // The work "Refreshing…" announced has landed, one way or the other.
-        // Matching on the target means a tick finishing elsewhere does not
-        // clear a message about the refresh you asked for.
-        if self.progress.as_ref() == ev.target() {
+        //
+        // **Only a terminal event ends it.** `Store::refresh` emits
+        // `RefreshStarted` synchronously, so reacting to any event for the
+        // target forgot what we were waiting for before the answer arrived,
+        // and the message stayed until the next keypress — the very bug this
+        // is here to fix, shipped once because the test fed `Updated` alone
+        // instead of the sequence the loop really delivers.
+        //
+        // Matching on the target as well means a tick finishing elsewhere
+        // does not clear a message about the refresh you asked for.
+        let landed = matches!(
+            ev,
+            StoreEvent::Updated(_) | StoreEvent::RefreshFailed { .. }
+        );
+        if landed && self.progress.as_ref() == ev.target() {
             self.progress = None;
             if matches!(ev, StoreEvent::Updated(_)) {
                 self.status = None;
@@ -445,8 +457,14 @@ mod tests {
     /// Reported from a smoke test: "Refreshing…" stayed on screen for ever.
     ///
     /// It was cleared only by the next keypress, so an idle terminal claimed
-    /// to be refreshing long after the refresh had landed. The message
-    /// announces work; the work finishing is what should end it.
+    /// to be refreshing long after the refresh had landed.
+    ///
+    /// **This test pumps the events the store really emitted**, in order,
+    /// rather than the one event the assertion is about. The first fix for
+    /// this shipped broken precisely because a hand-written `Updated` skipped
+    /// the `RefreshStarted` that `Store::refresh` emits synchronously — and
+    /// reacting to that one threw away what we were waiting for. A test that
+    /// picks its own events cannot catch a bug about which events arrive.
     #[tokio::test]
     async fn the_refreshing_message_ends_when_the_refresh_does() {
         let store = Arc::new(FakeStore::with_corpus());
@@ -455,14 +473,23 @@ mod tests {
             .await
             .unwrap();
 
+        // Subscribed after `start`, so entering the surface is not in the
+        // queue we are about to drain.
+        let mut rx = store.subscribe();
         a.on_key(KeyEvent::from(crossterm::event::KeyCode::Char('r')))
             .await
             .unwrap();
         assert_eq!(a.status.as_deref(), Some("Refreshing…"));
 
-        a.on_store(StoreEvent::Updated(RefreshTarget::Notifications))
-            .await
-            .unwrap();
+        let mut pumped = 0;
+        while let Ok(ev) = rx.try_recv() {
+            a.on_store(ev).await.unwrap();
+            pumped += 1;
+        }
+        assert!(
+            pumped >= 2,
+            "a refresh emits a start and a landing; got {pumped}"
+        );
         assert_eq!(
             a.status, None,
             "the refresh landed; nothing should still claim it is running"
@@ -480,6 +507,9 @@ mod tests {
             .unwrap();
 
         a.on_key(KeyEvent::from(crossterm::event::KeyCode::Char('r')))
+            .await
+            .unwrap();
+        a.on_store(StoreEvent::RefreshStarted(RefreshTarget::Dashboard))
             .await
             .unwrap();
         a.on_store(StoreEvent::Updated(RefreshTarget::Dashboard))
