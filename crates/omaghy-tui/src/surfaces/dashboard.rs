@@ -403,6 +403,10 @@ impl Surface for Dashboard {
     }
 
     /// What `r` means while this surface is on top.
+    fn reconfigure(&mut self, ctx: &Ctx) {
+        self.cfg = (*ctx.dashboard).clone();
+    }
+
     fn refresh_target(&self) -> Option<RefreshTarget> {
         Some(RefreshTarget::Dashboard)
     }

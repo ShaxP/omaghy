@@ -1280,6 +1280,10 @@ impl Surface for Notifications {
     }
 
     /// What `r` means while this surface is on top.
+    fn reconfigure(&mut self, ctx: &Ctx) {
+        self.variants = ctx.inbox;
+    }
+
     fn refresh_target(&self) -> Option<RefreshTarget> {
         Some(RefreshTarget::Notifications)
     }
