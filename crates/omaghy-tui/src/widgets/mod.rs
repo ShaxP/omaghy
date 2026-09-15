@@ -22,6 +22,7 @@ pub mod chrome;
 pub mod help;
 pub mod list;
 pub mod palette;
+pub mod settings;
 pub mod state;
 pub mod toast;
 

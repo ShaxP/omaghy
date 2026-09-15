@@ -17,13 +17,13 @@ expression: out
     │  Esc         back                  app.back                          │
     │  ?           this screen           app.help                          │
     │  :           command palette       app.palette                       │
+    │  ,           settings              app.settings                      │
     │  r           refresh               app.refresh                       │
     │  o           open on github.com    app.open                          │
     │  1–7         jump to surface       app.surface                       │
     │                                                                      │
     │  j / k scroll · any key closes                                      │
     └──────────────────────────────────────────────────────────────────────┘
-
 
 
 
@@ -43,6 +43,7 @@ expression: out
     │  Esc         back                  app.back                          │
     │  ?           this screen           app.help                          │
     │  :           command palette       app.palette                       │
+    │  ,           settings              app.settings                      │
     │  r           refresh               app.refresh                       │
     │  o           open on github.com    app.open                          │
     │  1–7         jump to surface       app.surface                       │

@@ -7,6 +7,7 @@
 //! See `spec/30-ui.md`.
 
 pub mod app;
+pub mod config;
 pub mod keys;
 pub mod route;
 pub mod surface;

@@ -36,6 +36,14 @@ pub struct Ctx {
     /// Not a preference — `40-config.md` §3 — but a surface still needs it,
     /// and hardcoding `Unicode` in each one made the fallback unreachable.
     pub icons: Icons,
+    /// Where a changed setting is persisted (`40-config.md` §6.3).
+    ///
+    /// A seam, not a path: writing a file is I/O and this crate performs none
+    /// (`CONTRIBUTING.md`). The binary supplies the format-preserving writer;
+    /// the fixture path and most tests supply [`Discard`].
+    ///
+    /// [`Discard`]: crate::config::Discard
+    pub config_writer: Arc<dyn crate::config::ConfigWriter>,
 }
 
 impl std::fmt::Debug for Ctx {
@@ -59,6 +67,7 @@ impl Ctx {
             inbox: crate::surfaces::notifications::Variants::default(),
             dashboard: Arc::new(omaghy_store::query::DashboardConfig::default()),
             icons,
+            config_writer: Arc::new(crate::config::Discard),
         }
     }
 
@@ -99,6 +108,17 @@ pub trait Surface: Send {
     /// Fetch from the store. Called on entry, and again when a relevant
     /// [`StoreEvent::Updated`] arrives.
     async fn load(&mut self, ctx: &Ctx) -> Result<()>;
+
+    /// Configuration changed; take the new values from `ctx`.
+    ///
+    /// `40-config.md` §6.2: a setting takes effect on the frame after it
+    /// changes, with no restart. Surfaces take their configuration when they
+    /// are built, so without this the only way to apply a change would be to
+    /// rebuild them — which would throw away the cursor and any filter, and
+    /// §6.2's whole point is watching the list you are looking at change.
+    ///
+    /// Default: nothing to reconfigure.
+    fn reconfigure(&mut self, _ctx: &Ctx) {}
 
     /// Whether this event concerns this surface. Default: only global ones.
     fn cares_about(&self, ev: &StoreEvent) -> bool {

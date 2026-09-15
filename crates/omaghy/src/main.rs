@@ -2,14 +2,14 @@
 //!
 //! See `spec/00-overview.md`.
 
-mod config;
+mod config_file;
 
 use anyhow::{Context, Result, bail};
 use clap::Parser;
 use omaghy_api::viewer_login;
 use omaghy_cache::SqliteStore;
 use omaghy_store::{FakeStore, Store, Viewer};
-use omaghy_sync::Syncer;
+use omaghy_sync::{PollConfig, Syncer};
 use omaghy_tui::{App, Route, terminal};
 use std::sync::Arc;
 use time::OffsetDateTime;
@@ -62,10 +62,10 @@ fn main() -> Result<()> {
     // The path actually used, not the default one — `--config` and
     // `OMAGHY_CONFIG` redirect it, and a log line naming the file it did not
     // read is worse than no line at all.
-    let path = cli.config.clone().or_else(config::path);
+    let path = cli.config.clone().or_else(config_file::path);
     let (cfg, warnings) = match &path {
-        Some(p) => config::load_from(p),
-        None => (config::Config::default(), Vec::new()),
+        Some(p) => config_file::load_from(p),
+        None => (omaghy_tui::config::Config::default(), Vec::new()),
     };
     match &path {
         Some(p) if p.exists() => {
@@ -86,10 +86,14 @@ fn main() -> Result<()> {
     tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()?
-        .block_on(run(route, cfg))
+        .block_on(run(route, cfg, path))
 }
 
-async fn run(route: Route, cfg: config::Config) -> Result<()> {
+async fn run(
+    route: Route,
+    cfg: omaghy_tui::config::Config,
+    config_path: Option<std::path::PathBuf>,
+) -> Result<()> {
     // Without this the failure is `No such device or address (os error 6)`,
     // which is what you get piping omaghy, running it from a script, or in a
     // container. Name the actual problem instead.
@@ -119,7 +123,12 @@ async fn run(route: Route, cfg: config::Config) -> Result<()> {
     let mut tui = terminal::init().context("could not set up the terminal")?;
     let _guard = terminal::Guard;
 
-    let mut app = App::new(store, now).with_config(cfg.inbox, cfg.dashboard.clone());
+    // The writer goes to the file that was actually read, so a change lands
+    // where the value came from — including a `--config` path.
+    let mut app = App::new(store, now).with_settings(cfg.clone());
+    if let Some(p) = config_path {
+        app = app.with_config_writer(Arc::new(config_file::FileWriter::new(p)));
+    }
     let result = async {
         app.start(route).await?;
         app.run(&mut tui).await
@@ -137,7 +146,7 @@ async fn run(route: Route, cfg: config::Config) -> Result<()> {
 /// Construction is circular by nature — the store holds the remote, and the
 /// remote writes back into the store — so the syncer is built first, handed to
 /// the store, and only then given its way back (`omaghy_sync::Syncer::attach`).
-async fn real_store(cfg: &config::Config) -> Result<Arc<dyn Store>> {
+async fn real_store(cfg: &omaghy_tui::config::Config) -> Result<Arc<dyn Store>> {
     use omaghy_api::{GitHubClient, ReqwestTransport, resolve_token};
 
     let resolved = resolve_token().context("could not find a GitHub token")?;
@@ -166,7 +175,10 @@ async fn real_store(cfg: &config::Config) -> Result<Arc<dyn Store>> {
     // surface and on `r`, so an inbox left open showed the morning's rows all
     // afternoon. The handles are dropped deliberately — the tasks hold a
     // `Weak` to the store and end when the TUI drops it.
-    syncer.start_polling(cfg.refresh);
+    syncer.start_polling(PollConfig {
+        notifications: cfg.refresh_notifications,
+        dashboard: cfg.refresh_dashboard,
+    });
 
     Ok(store)
 }

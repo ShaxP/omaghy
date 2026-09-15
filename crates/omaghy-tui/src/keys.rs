@@ -33,6 +33,10 @@ pub enum Global {
     Back,
     Help,
     Palette,
+    /// `40-config.md` §6: cross-cutting, like help and the palette — and
+    /// deliberately not a numbered surface, because renumbering `1`–`7` to
+    /// make room would break a keystroke people have in their fingers.
+    Settings,
     Refresh,
     OpenInBrowser,
     Surface(usize),
@@ -43,6 +47,7 @@ pub const GLOBAL_BINDINGS: &[Binding] = &[
     Binding::new("app.back", "Esc", "back"),
     Binding::new("app.help", "?", "this screen"),
     Binding::new("app.palette", ":", "command palette"),
+    Binding::new("app.settings", ",", "settings"),
     Binding::new("app.refresh", "r", "refresh"),
     Binding::new("app.open", "o", "open on github.com"),
     Binding::new("app.surface", "1–7", "jump to surface"),
@@ -60,6 +65,7 @@ pub fn resolve(key: KeyEvent, depth: usize) -> Option<Global> {
         (KeyCode::Char('q'), false) | (KeyCode::Esc, _) => Some(Global::Back),
         (KeyCode::Char('?'), false) => Some(Global::Help),
         (KeyCode::Char(':'), false) => Some(Global::Palette),
+        (KeyCode::Char(','), false) => Some(Global::Settings),
         (KeyCode::Char('r'), false) => Some(Global::Refresh),
         (KeyCode::Char('o'), false) => Some(Global::OpenInBrowser),
         (KeyCode::Char(c @ '1'..='7'), false) => {
