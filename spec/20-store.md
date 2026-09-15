@@ -326,6 +326,13 @@ through `Store::refresh`, and sleeps again. Three properties are load-bearing:
   holding the first value it saw would keep polling at a rate since withdrawn.
   It applies to notifications, the endpoint that sends it; applying one
   endpoint's instruction to the dashboard would be inventing policy.
+- **The interval counts from the last request, whoever made it.** Not from the
+  poll task's own schedule: pressing `r` at second 59 was otherwise followed by
+  a tick at second 60, which is two requests a second apart and precisely what
+  `X-Poll-Interval` exists to prevent. A tick that finds the target fetched
+  more recently than an interval ago waits out the remainder instead of firing.
+  A failed fetch resets the clock too — what the interval protects is how often
+  we *ask*.
 - **Consecutive failures double the wait**, to a cap. `omaghy-api` already
   refuses to send while rate limited, so a tick during a limit costs no
   network — but it still emits `RefreshFailed`, and an offline laptop painting

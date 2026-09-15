@@ -42,6 +42,7 @@ struct Job {
     /// (`spec/40-config.md` §1).
     dashboard: Arc<DashboardConfig>,
     failures: Arc<Mutex<HashMap<RefreshTarget, u32>>>,
+    last_fetch: Arc<Mutex<HashMap<RefreshTarget, std::time::Instant>>>,
 }
 
 pub struct Syncer {
@@ -53,6 +54,13 @@ pub struct Syncer {
     /// the first success, so a network that comes back is noticed at the
     /// configured interval rather than at the backed-off one.
     failures: Arc<Mutex<HashMap<RefreshTarget, u32>>>,
+    /// When each target was last fetched, by anyone.
+    ///
+    /// The poll interval is measured from here rather than from the poll
+    /// task's own schedule. Otherwise pressing `r` at second 59 is followed by
+    /// a tick at second 60 — two requests a second apart, which is both waste
+    /// and the thing `X-Poll-Interval` exists to prevent.
+    last_fetch: Arc<Mutex<HashMap<RefreshTarget, std::time::Instant>>>,
 }
 
 impl std::fmt::Debug for Syncer {
@@ -77,6 +85,7 @@ impl Syncer {
             running: Arc::new(Mutex::new(HashMap::new())),
             dashboard: Arc::new(dashboard),
             failures: Arc::new(Mutex::new(HashMap::new())),
+            last_fetch: Arc::new(Mutex::new(HashMap::new())),
         })
     }
 
@@ -93,6 +102,25 @@ impl Syncer {
     /// which is how a poll task learns to stop.
     pub(crate) fn store(&self) -> Option<Arc<SqliteStore>> {
         self.store.lock().expect("not poisoned").upgrade()
+    }
+
+    /// How long since this target was last fetched, by anyone — a poll tick,
+    /// `r`, or entering a surface. `None` if it never has been.
+    pub(crate) fn since_last_fetch(&self, target: &RefreshTarget) -> Option<time::Duration> {
+        self.last_fetch
+            .lock()
+            .expect("not poisoned")
+            .get(target)
+            .map(|t| time::Duration::try_from(t.elapsed()).unwrap_or(time::Duration::ZERO))
+    }
+
+    /// Start the clock without having fetched, so the first tick comes one
+    /// whole interval after polling begins rather than immediately.
+    pub(crate) fn mark_fetched(&self, target: &RefreshTarget) {
+        self.last_fetch
+            .lock()
+            .expect("not poisoned")
+            .insert(target.clone(), std::time::Instant::now());
     }
 
     /// Consecutive failures for a target. Zero when it last succeeded.
@@ -112,6 +140,7 @@ impl Syncer {
             running: self.running.clone(),
             dashboard: self.dashboard.clone(),
             failures: self.failures.clone(),
+            last_fetch: self.last_fetch.clone(),
         })
     }
 }
@@ -301,6 +330,13 @@ impl Job {
                 Err(_) => *failures.entry(target.clone()).or_insert(0) += 1,
             }
         }
+        // Recorded whether it succeeded or not: what the interval protects is
+        // how often we *ask*, and a failed ask was still an ask.
+        self.last_fetch
+            .lock()
+            .expect("not poisoned")
+            .insert(target.clone(), std::time::Instant::now());
+
         let ms = started.elapsed().as_millis();
         match result {
             Ok(()) => {
@@ -388,6 +424,38 @@ mod tests {
             tokio::time::sleep(std::time::Duration::from_millis(10)).await;
         }
         panic!("a refresh never finished");
+    }
+
+    /// The deferral in `poll` is only real if this clock moves. Asserting
+    /// `remaining_until_due` alone would pass with the wiring removed.
+    #[tokio::test]
+    async fn a_refresh_records_when_it_asked_whatever_the_answer() {
+        let target = RefreshTarget::Notifications;
+
+        // A failure is still a request, and still resets the interval: what
+        // the interval protects is how often we ask.
+        let offline = Arc::new(StubTransport::failing(TransportError::Unreachable(
+            "no route to host".into(),
+        )));
+        let (syncer, store) = syncer_over(offline);
+        assert_eq!(syncer.since_last_fetch(&target), None, "nothing has asked");
+
+        store.refresh(target.clone());
+        settle(&syncer).await;
+        assert!(
+            syncer.since_last_fetch(&target).is_some(),
+            "a failed fetch was still a fetch"
+        );
+
+        // And a success does the same.
+        let (syncer, store) = syncer_over(Arc::new(StubTransport::always(HttpResponse::new(304))));
+        store.refresh(target.clone());
+        settle(&syncer).await;
+        let since = syncer.since_last_fetch(&target).expect("recorded");
+        assert!(
+            since < time::Duration::seconds(30),
+            "the clock should have just been reset, not be ancient: {since:?}"
+        );
     }
 
     /// The back-off in `poll` is only real if this counter moves. Asserting

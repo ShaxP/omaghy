@@ -70,6 +70,10 @@ impl Syncer {
     /// watch`, a test — can stop them. Dropping them is fine: the tasks end on
     /// their own once nothing holds the store.
     pub fn start_polling(self: &Arc<Self>, cfg: PollConfig) -> Vec<JoinHandle<()>> {
+        // Start the clock now: the surface being opened fetches on entry, so
+        // the first tick belongs one interval from here rather than at once.
+        self.mark_fetched(&RefreshTarget::Notifications);
+        self.mark_fetched(&RefreshTarget::Dashboard);
         vec![
             self.poll(RefreshTarget::Notifications, cfg.notifications),
             self.poll(RefreshTarget::Dashboard, cfg.dashboard),
@@ -84,26 +88,59 @@ impl Syncer {
 
 async fn poll_forever(syncer: Weak<Syncer>, target: RefreshTarget, base: Duration) {
     loop {
-        let wait = {
+        let (interval, remaining) = {
             // Scoped so no `Arc` is held across the sleep: a poll task must
             // not be the reason the store outlives the TUI.
             let Some(s) = syncer.upgrade() else { return };
             let Some(store) = s.store() else { return };
-            interval_for(&store, &target, base, s.failures(&target))
+            let interval = interval_for(&store, &target, base, s.failures(&target));
+            (
+                interval,
+                remaining_until_due(interval, s.since_last_fetch(&target)),
+            )
         };
 
-        tokio::time::sleep(std::time::Duration::from_secs_f64(
-            wait.as_seconds_f64().max(1.0),
-        ))
-        .await;
+        if !remaining.is_zero() {
+            // Not due yet: something else fetched more recently than a whole
+            // interval ago. Wait out the remainder and look again rather than
+            // firing — the interval counts from the last request, whoever made
+            // it, so pressing `r` genuinely defers the next tick instead of
+            // being followed by one a second later.
+            sleep(remaining).await;
+            continue;
+        }
 
         let Some(s) = syncer.upgrade() else { return };
         let Some(store) = s.store() else { return };
         // `debug`: one of these per target per minute says only that a timer
         // fired. What a reader actually wants — whether the fetch happened and
         // what it found — is the `info` line `Job::run` writes when it lands.
-        tracing::debug!(?target, seconds = wait.whole_seconds(), "poll tick");
+        tracing::debug!(?target, seconds = interval.whole_seconds(), "poll tick");
         store.refresh(target.clone());
+
+        // A whole interval before the next look. The fetch just asked for has
+        // not landed yet, so re-reading `since_last_fetch` straight away would
+        // still say "overdue" and schedule again in a tight loop.
+        sleep(interval).await;
+    }
+}
+
+async fn sleep(d: Duration) {
+    tokio::time::sleep(std::time::Duration::from_secs_f64(
+        d.as_seconds_f64().max(0.0),
+    ))
+    .await;
+}
+
+/// How long until this target is due, given when it was last fetched.
+///
+/// `None` — never fetched — is due now. So is one fetched longer ago than the
+/// interval; anything else waits out the difference.
+fn remaining_until_due(interval: Duration, since_last: Option<Duration>) -> Duration {
+    match since_last {
+        None => Duration::ZERO,
+        Some(elapsed) if elapsed >= interval => Duration::ZERO,
+        Some(elapsed) => interval - elapsed,
     }
 }
 
@@ -226,6 +263,27 @@ mod tests {
             at(u32::MAX) <= MAX_BACKOFF.whole_seconds(),
             "the counter is clamped before it is used as a shift"
         );
+    }
+
+    /// The reported behaviour: `r` at second 59 was followed by a tick at
+    /// second 60. The interval counts from the last request, whoever made it.
+    #[test]
+    fn a_manual_refresh_defers_the_next_tick_by_a_whole_interval() {
+        let minute = Duration::seconds(60);
+
+        // Someone refreshed a second ago: nearly a full minute still to wait,
+        // not the one second left on the poll task's own schedule.
+        assert_eq!(
+            remaining_until_due(minute, Some(Duration::seconds(1))),
+            Duration::seconds(59)
+        );
+
+        // Due exactly on the interval, and overdue past it.
+        assert!(remaining_until_due(minute, Some(minute)).is_zero());
+        assert!(remaining_until_due(minute, Some(Duration::seconds(3600))).is_zero());
+
+        // Never fetched is due now: nothing is deferring it.
+        assert!(remaining_until_due(minute, None).is_zero());
     }
 
     /// A poll task must not be the reason the store stays alive.

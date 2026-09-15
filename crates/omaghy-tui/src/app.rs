@@ -11,7 +11,7 @@ use crate::{
 use crossterm::event::{Event, KeyCode, KeyEventKind, KeyModifiers};
 use futures_util::StreamExt as _;
 use omaghy_model::Result;
-use omaghy_store::{Store, StoreEvent};
+use omaghy_store::{RefreshTarget, Store, StoreEvent};
 use ratatui::{
     Frame,
     layout::{Constraint, Layout, Rect},
@@ -50,6 +50,14 @@ pub struct App {
     dirty: bool,
     quit: bool,
     status: Option<String>,
+    /// Which refresh `status` is announcing, when it is announcing one.
+    ///
+    /// "Refreshing…" was cleared only by the next keypress, so it outlived
+    /// the work it described: an idle terminal claimed to be refreshing for
+    /// as long as you left it alone. Remembering the target clears the
+    /// message when that target lands, without wiping a message about
+    /// something else.
+    progress: Option<RefreshTarget>,
 }
 
 impl App {
@@ -71,6 +79,7 @@ impl App {
             dirty: true,
             quit: false,
             status: None,
+            progress: None,
         }
     }
 
@@ -161,8 +170,9 @@ impl App {
                     // hardcode the inbox, so `r` on the dashboard refreshed
                     // the wrong thing.
                     Some(target) => {
-                        self.ctx.store.refresh(target);
+                        self.ctx.store.refresh(target.clone());
                         self.status = Some("Refreshing…".into());
+                        self.progress = Some(target);
                     }
                     None => self.status = Some("Nothing to refresh here".into()),
                 },
@@ -205,6 +215,16 @@ impl App {
         if self.top().cares_about(&ev) {
             if let StoreEvent::Updated(_) = ev {
                 self.top().load(&ctx).await?;
+            }
+            self.dirty = true;
+        }
+        // The work "Refreshing…" announced has landed, one way or the other.
+        // Matching on the target means a tick finishing elsewhere does not
+        // clear a message about the refresh you asked for.
+        if self.progress.as_ref() == ev.target() {
+            self.progress = None;
+            if matches!(ev, StoreEvent::Updated(_)) {
+                self.status = None;
             }
             self.dirty = true;
         }
@@ -354,7 +374,11 @@ impl App {
 
             tokio::select! {
                 Some(Ok(ev)) = events.next() => match ev {
-                    Event::Key(k) => { self.status = None; self.on_key(k).await?; }
+                    Event::Key(k) => {
+                        self.status = None;
+                        self.progress = None;
+                        self.on_key(k).await?;
+                    }
                     Event::Resize(_, _) => self.dirty = true,
                     _ => {}
                 },
@@ -416,6 +440,52 @@ mod tests {
             "narrow should carry fewer hints: {narrow} vs {wide}"
         );
         assert!(narrow >= 2, "the two escape hints are never shed");
+    }
+
+    /// Reported from a smoke test: "Refreshing…" stayed on screen for ever.
+    ///
+    /// It was cleared only by the next keypress, so an idle terminal claimed
+    /// to be refreshing long after the refresh had landed. The message
+    /// announces work; the work finishing is what should end it.
+    #[tokio::test]
+    async fn the_refreshing_message_ends_when_the_refresh_does() {
+        let store = Arc::new(FakeStore::with_corpus());
+        let mut a = App::new(store.clone(), omaghy_store::fake::FIXTURE_NOW);
+        a.start(Route::surface(SurfaceId::Notifications))
+            .await
+            .unwrap();
+
+        a.on_key(KeyEvent::from(crossterm::event::KeyCode::Char('r')))
+            .await
+            .unwrap();
+        assert_eq!(a.status.as_deref(), Some("Refreshing…"));
+
+        a.on_store(StoreEvent::Updated(RefreshTarget::Notifications))
+            .await
+            .unwrap();
+        assert_eq!(
+            a.status, None,
+            "the refresh landed; nothing should still claim it is running"
+        );
+    }
+
+    /// And a landing elsewhere does not clear it: the dashboard's poll tick
+    /// finishing says nothing about the inbox refresh you asked for.
+    #[tokio::test]
+    async fn another_targets_refresh_does_not_clear_the_message() {
+        let store = Arc::new(FakeStore::with_corpus());
+        let mut a = App::new(store.clone(), omaghy_store::fake::FIXTURE_NOW);
+        a.start(Route::surface(SurfaceId::Notifications))
+            .await
+            .unwrap();
+
+        a.on_key(KeyEvent::from(crossterm::event::KeyCode::Char('r')))
+            .await
+            .unwrap();
+        a.on_store(StoreEvent::Updated(RefreshTarget::Dashboard))
+            .await
+            .unwrap();
+        assert_eq!(a.status.as_deref(), Some("Refreshing…"));
     }
 
     #[tokio::test]
