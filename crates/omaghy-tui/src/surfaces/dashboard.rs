@@ -78,6 +78,17 @@ impl Dashboard {
         Self::default()
     }
 
+    /// The sections to show (`40-config.md` §2 `[dashboard]`).
+    ///
+    /// Taken at construction rather than read from [`Ctx`] per frame: the
+    /// sections decide what this surface *is*, and a screen offering sections
+    /// the syncer does not count would be the dashboard lying again.
+    #[must_use]
+    pub fn with_config(mut self, cfg: &DashboardConfig) -> Self {
+        self.cfg = cfg.clone();
+        self
+    }
+
     /// The icon mode.
     ///
     /// Defaulted rather than taken from [`Ctx`], which carries no icon mode —
@@ -430,11 +441,7 @@ mod tests {
     use time::Duration;
 
     fn ctx(store: Arc<dyn Store>) -> Ctx {
-        Ctx {
-            store,
-            now: FIXTURE_NOW,
-            icons: Icons::new(IconMode::Unicode),
-        }
+        Ctx::new(store, FIXTURE_NOW, Icons::new(IconMode::Unicode))
     }
 
     /// A loaded dashboard, exactly as the router would produce one.
