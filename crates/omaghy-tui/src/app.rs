@@ -48,6 +48,12 @@ pub struct App {
     stack: Vec<Entry>,
     ctx: Ctx,
     help_open: bool,
+    settings_open: bool,
+    settings: crate::widgets::settings::Settings,
+    /// The configuration as it stands, including changes made this session.
+    config: crate::config::Config,
+    /// Why the last change could not be saved, if it could not (§6.3).
+    settings_note: Option<String>,
     dirty: bool,
     quit: bool,
     status: Option<String>,
@@ -77,6 +83,10 @@ impl App {
             stack: Vec::new(),
             ctx,
             help_open: false,
+            settings_open: false,
+            settings: crate::widgets::settings::Settings::new(),
+            config: crate::config::Config::default(),
+            settings_note: None,
             dirty: true,
             quit: false,
             status: None,
@@ -93,7 +103,35 @@ impl App {
     pub fn with_config(mut self, inbox: Variants, dashboard: DashboardConfig) -> Self {
         self.ctx.inbox = inbox;
         self.ctx.dashboard = Arc::new(dashboard);
+        self.config.inbox = inbox;
+        self.config.dashboard = (*self.ctx.dashboard).clone();
         self
+    }
+
+    /// The whole configuration, as read from the file.
+    ///
+    /// Carries the provenance the settings surface shows, which
+    /// [`App::with_config`] cannot — it takes only the two values surfaces
+    /// need. Both exist because most tests want the short one.
+    #[must_use]
+    pub fn with_settings(mut self, config: crate::config::Config) -> Self {
+        self.ctx.inbox = config.inbox;
+        self.ctx.dashboard = Arc::new(config.dashboard.clone());
+        self.config = config;
+        self
+    }
+
+    /// Where a changed setting is persisted. Defaults to keeping nothing.
+    #[must_use]
+    pub fn with_config_writer(mut self, writer: Arc<dyn crate::config::ConfigWriter>) -> Self {
+        self.ctx.config_writer = writer;
+        self
+    }
+
+    /// The configuration as it stands, for a caller that needs to see a
+    /// change made from the settings surface — the poll loop's intervals, say.
+    pub fn config(&self) -> &crate::config::Config {
+        &self.config
     }
 
     pub async fn start(&mut self, route: Route) -> Result<()> {
@@ -160,6 +198,11 @@ impl App {
             self.dirty = true;
             return Ok(());
         }
+        if self.settings_open {
+            self.on_settings_key(key);
+            self.dirty = true;
+            return Ok(());
+        }
 
         // A surface taking free text gets everything except the two keys that
         // must always escape, or it would lose most of the alphabet mid-word.
@@ -177,6 +220,10 @@ impl App {
                 Global::Quit => self.quit = true,
                 Global::Back => self.pop(),
                 Global::Help => self.help_open = true,
+                Global::Settings => {
+                    self.settings_open = true;
+                    self.settings_note = None;
+                }
                 Global::Palette => self.status = Some("Command palette arrives in W1.3".into()),
                 Global::Refresh => match self.top().refresh_target() {
                     // The surface says what `r` means here; App used to
@@ -260,6 +307,90 @@ impl App {
         Ok(())
     }
 
+    // --------------------------------------------------------- settings
+
+    /// Keys while the settings panel is open.
+    ///
+    /// It takes everything: it is a modal panel, and a `j` that fell through
+    /// to the list behind it would move a cursor the user cannot see.
+    fn on_settings_key(&mut self, key: crossterm::event::KeyEvent) {
+        use crate::widgets::settings::SettingsOutcome;
+
+        let outcome = match key.code {
+            KeyCode::Char(',') | KeyCode::Esc | KeyCode::Char('q') => SettingsOutcome::Dismissed,
+            KeyCode::Char('j') | KeyCode::Down => {
+                self.settings.next();
+                SettingsOutcome::Consumed
+            }
+            KeyCode::Char('k') | KeyCode::Up => {
+                self.settings.prev();
+                SettingsOutcome::Consumed
+            }
+            KeyCode::Char('l') | KeyCode::Right | KeyCode::Enter => {
+                let id = self.settings.selected();
+                self.change(id, true);
+                SettingsOutcome::Changed(id)
+            }
+            KeyCode::Char('h') | KeyCode::Left => {
+                let id = self.settings.selected();
+                self.change(id, false);
+                SettingsOutcome::Changed(id)
+            }
+            _ => SettingsOutcome::Consumed,
+        };
+
+        if outcome == SettingsOutcome::Dismissed {
+            self.settings_open = false;
+            self.settings_note = None;
+        }
+    }
+
+    /// Cycle one setting, apply it, and persist it.
+    ///
+    /// The order matters: applying comes first and never depends on the write
+    /// succeeding. §6.3 — a change that cannot be saved still applies for the
+    /// session, and says so.
+    fn change(&mut self, id: crate::config::SettingId, forward: bool) {
+        use crate::config::Source;
+
+        let scalar = id.cycle(&mut self.config, forward);
+
+        // Apply: into the context every surface reads, then into the surfaces
+        // already built, which took their copy when they were constructed.
+        self.ctx.inbox = self.config.inbox;
+        self.ctx.dashboard = Arc::new(self.config.dashboard.clone());
+        let ctx = self.ctx.clone();
+        for entry in &mut self.stack {
+            entry.surface.reconfigure(&ctx);
+        }
+        self.dirty = true;
+
+        // Persist. Only what differs from the default is written, and a
+        // setting returning to its default takes its key with it (§6.3).
+        let value = if id.is_default(&self.config) {
+            None
+        } else {
+            Some(scalar)
+        };
+        match self.ctx.config_writer.write(id.section(), id.key(), value) {
+            Ok(()) => {
+                self.settings_note = None;
+                // Written, so it is the file's now — and a value back at its
+                // default is the default's again, not "this session".
+                let source = if id.is_default(&self.config) {
+                    Source::Default
+                } else {
+                    Source::File
+                };
+                id.set_source_public(&mut self.config, source);
+            }
+            Err(e) => {
+                id.set_source_public(&mut self.config, Source::Unsaved);
+                self.settings_note = Some(format!("applied, but not saved — {e}"));
+            }
+        }
+    }
+
     // ----------------------------------------------------------- render
 
     pub fn render(&mut self, f: &mut Frame) {
@@ -318,6 +449,10 @@ impl App {
 
         if self.help_open {
             self.render_help(f, area);
+        }
+        if self.settings_open {
+            self.settings
+                .render(f, area, &self.config, self.settings_note.as_deref());
         }
     }
 
@@ -558,6 +693,300 @@ mod tests {
             let _: &Binding = b;
             assert!(b.action.contains('.'), "{} should be dotted", b.action);
             assert!(!b.description.is_empty());
+        }
+    }
+    // ------------------------------------------------------- the settings panel
+
+    mod settings {
+        use super::super::*;
+        use crate::config::{Config, ConfigWriter, Scalar, SettingId, Source};
+        use crossterm::event::KeyEvent;
+        use omaghy_store::{FakeStore, Store};
+        use ratatui::{Terminal, backend::TestBackend};
+        use std::sync::Mutex;
+
+        /// A writer that remembers, and can be told to fail.
+        #[derive(Debug)]
+        struct Recording {
+            writes: Mutex<Vec<(String, String, Option<Scalar>)>>,
+            fail: bool,
+            error: String,
+        }
+
+        impl Default for Recording {
+            fn default() -> Self {
+                Self {
+                    writes: Mutex::new(Vec::new()),
+                    fail: false,
+                    error: "the disk is read-only".to_owned(),
+                }
+            }
+        }
+
+        impl Recording {
+            fn failing() -> Self {
+                Self {
+                    fail: true,
+                    ..Self::default()
+                }
+            }
+
+            /// Fails with the message a read-only config directory really
+            /// produces — long, and mostly path.
+            fn failing_with(error: &str) -> Self {
+                Self {
+                    fail: true,
+                    error: error.to_owned(),
+                    ..Self::default()
+                }
+            }
+            fn writes(&self) -> Vec<(String, String, Option<Scalar>)> {
+                self.writes.lock().unwrap().clone()
+            }
+        }
+
+        impl ConfigWriter for Recording {
+            fn write(&self, section: &str, key: &str, value: Option<Scalar>) -> Result<(), String> {
+                self.writes
+                    .lock()
+                    .unwrap()
+                    .push((section.to_owned(), key.to_owned(), value));
+                if self.fail {
+                    Err(self.error.clone())
+                } else {
+                    Ok(())
+                }
+            }
+        }
+
+        async fn app_with(writer: Arc<Recording>) -> App {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_settings(Config::default())
+                .with_config_writer(writer);
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .expect("surface loads");
+            app
+        }
+
+        async fn press(app: &mut App, c: char) {
+            send(app, KeyEvent::from(KeyCode::Char(c))).await;
+        }
+
+        async fn send(app: &mut App, key: KeyEvent) {
+            app.on_key(key).await.expect("a key never fails here");
+        }
+
+        fn draw(app: &mut App) -> String {
+            let mut t = Terminal::new(TestBackend::new(100, 30)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+
+        #[tokio::test]
+        async fn comma_opens_it_and_every_setting_is_listed() {
+            let app = &mut app_with(Arc::new(Recording::default())).await;
+            press(app, ',').await;
+            let out = draw(app);
+
+            for id in SettingId::ALL {
+                assert!(
+                    out.contains(id.key()),
+                    "`{}` should be on the panel:\n{out}",
+                    id.key()
+                );
+            }
+            assert!(out.contains("settings"), "titled:\n{out}");
+        }
+
+        /// §6.1: each row states where its value came from.
+        #[tokio::test]
+        async fn a_row_says_where_its_value_came_from() {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut cfg = Config::default();
+            cfg.sources.group = Source::File;
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW).with_settings(cfg);
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+
+            press(&mut app, ',').await;
+            let out = draw(&mut app);
+            assert!(
+                out.contains("config.toml"),
+                "the file's value says so:\n{out}"
+            );
+            assert!(
+                out.contains("default"),
+                "and the others say default:\n{out}"
+            );
+        }
+
+        /// §6.2: a change takes effect on the frame after it, with no restart —
+        /// and the inbox *behind* the panel is what has to change.
+        #[tokio::test]
+        async fn a_change_redraws_the_inbox_behind_the_panel() {
+            let app = &mut app_with(Arc::new(Recording::default())).await;
+            let before = draw(app);
+
+            press(app, ',').await;
+            // Down to `rows`, then change it.
+            for _ in 0..3 {
+                press(app, 'j').await;
+            }
+            assert_eq!(app.config().inbox.rows.label(), "two-line");
+            press(app, 'l').await;
+            assert_eq!(
+                app.config().inbox.rows.label(),
+                "one-line",
+                "the setting itself changed"
+            );
+
+            // Close the panel: what is underneath must have been reconfigured.
+            press(app, ',').await;
+            let after = draw(app);
+            assert_ne!(
+                before, after,
+                "the inbox behind the panel should be drawing differently"
+            );
+        }
+
+        #[tokio::test]
+        async fn a_change_is_written_immediately() {
+            let writer = Arc::new(Recording::default());
+            let app = &mut app_with(writer.clone()).await;
+
+            press(app, ',').await;
+            for _ in 0..3 {
+                press(app, 'j').await;
+            }
+            press(app, 'l').await;
+
+            let writes = writer.writes();
+            assert_eq!(writes.len(), 1, "one change, one write: {writes:?}");
+            assert_eq!(writes[0].0, "notifications");
+            assert_eq!(writes[0].1, "rows");
+            assert_eq!(writes[0].2, Some(Scalar::Str("one-line".into())));
+        }
+
+        /// §6.3: only settings that differ from the default are written, so
+        /// cycling back to the default removes the key rather than writing it.
+        #[tokio::test]
+        async fn returning_to_the_default_asks_for_the_key_to_be_removed() {
+            let writer = Arc::new(Recording::default());
+            let app = &mut app_with(writer.clone()).await;
+
+            press(app, ',').await;
+            for _ in 0..3 {
+                press(app, 'j').await;
+            }
+            press(app, 'l').await; // two-line -> one-line
+            press(app, 'l').await; // one-line -> two-line, the default again
+
+            let writes = writer.writes();
+            assert_eq!(writes.len(), 2);
+            assert_eq!(writes[1].2, None, "back at the default: remove the key");
+            assert_eq!(
+                SettingId::Rows.source(app.config()),
+                Source::Default,
+                "and the row says default again, not `this session`"
+            );
+        }
+
+        /// §6.3: if the file cannot be written the change still applies for the
+        /// session, and the surface says it could not be saved.
+        #[tokio::test]
+        async fn a_failed_write_still_applies_and_says_so() {
+            let app = &mut app_with(Arc::new(Recording::failing())).await;
+
+            press(app, ',').await;
+            for _ in 0..3 {
+                press(app, 'j').await;
+            }
+            press(app, 'l').await;
+
+            assert_eq!(
+                app.config().inbox.rows.label(),
+                "one-line",
+                "the change is not refused"
+            );
+            assert_eq!(SettingId::Rows.source(app.config()), Source::Unsaved);
+
+            let out = draw(app);
+            assert!(
+                out.contains("not saved"),
+                "it must not fail silently:\n{out}"
+            );
+            assert!(out.contains("read-only"), "and it names why:\n{out}");
+        }
+
+        /// Reported from a smoke test: the panel showed
+        /// `applied, but not saved — /home/…/config.toml could ` and the rest
+        /// of the sentence — including *why* — was off the edge.
+        ///
+        /// A `Paragraph` does not wrap, so a note longer than the panel was
+        /// simply cut, and the reason is the end of that sentence.
+        #[tokio::test]
+        async fn a_long_failure_reason_wraps_instead_of_being_cut() {
+            let reason = "/home/shahram/.config/omaghy/config.toml could not be \
+                          written: Permission denied (os error 13)";
+            let app = &mut app_with(Arc::new(Recording::failing_with(reason))).await;
+
+            press(app, ',').await;
+            for _ in 0..3 {
+                press(app, 'j').await;
+            }
+            press(app, 'l').await;
+
+            let out = draw(app);
+            assert!(
+                out.contains("Permission denied"),
+                "the reason is the point of the message:\n{out}"
+            );
+            assert!(
+                out.contains("os error 13"),
+                "and it must not stop before the end:\n{out}"
+            );
+            for line in out.lines() {
+                assert!(
+                    line.chars().count() <= 100,
+                    "a line overflowed the terminal: {line}"
+                );
+            }
+        }
+
+        #[tokio::test]
+        async fn h_and_l_cycle_in_opposite_directions() {
+            let app = &mut app_with(Arc::new(Recording::default())).await;
+            press(app, ',').await;
+            press(app, 'j').await; // reason
+
+            press(app, 'l').await;
+            let forward = app.config().inbox.reason.label().to_owned();
+            press(app, 'h').await;
+            assert_eq!(
+                app.config().inbox.reason.label(),
+                "glyph",
+                "`h` should undo `l`, got {forward} then this"
+            );
+        }
+
+        #[tokio::test]
+        async fn escape_closes_it_without_touching_the_surface_underneath() {
+            let app = &mut app_with(Arc::new(Recording::default())).await;
+            let before = draw(app);
+            press(app, ',').await;
+            send(app, KeyEvent::from(KeyCode::Esc)).await;
+            assert_eq!(draw(app), before, "closing changes nothing");
         }
     }
 }

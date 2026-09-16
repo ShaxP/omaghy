@@ -13,9 +13,9 @@ expression: out
     │  app.palette                     command palette                    :│
     │  app.quit                        quit                      q / Ctrl-C│
     │  app.refresh                     refresh                            r│
+    │  app.settings                    settings                           ,│
     │  app.surface                     jump to surface                  1–7│
     │  notification.mark-read          toggle read                    Enter│
-    │  notification.unread-only        unread only                        u│
     └──────────────────────────────────────────────────────────────────────┘
 
 ── query ──

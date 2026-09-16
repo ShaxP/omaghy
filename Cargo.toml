@@ -60,6 +60,11 @@ clap        = { version = "4", features = ["derive", "env"] }
 anyhow      = "1"
 directories = "6"
 toml        = "1"
+# Format-preserving edits. Added for the settings surface: `40-config.md` §6.3
+# requires that comments and ordering in a hand-edited config survive a write,
+# which serialising the whole struct cannot do. Anticipated by §6.3 itself,
+# which named the crate and said it would need adding here.
+toml_edit   = "0.23"
 
 # diagnostics — a TUI owns the screen, so logs go to a file
 tracing            = "0.1"

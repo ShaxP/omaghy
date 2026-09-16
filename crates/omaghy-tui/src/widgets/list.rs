@@ -252,6 +252,64 @@ pub fn elide(s: &str, width: usize, icons: Icons) -> String {
     out
 }
 
+/// Break `s` into lines of at most `width` cells.
+///
+/// On whitespace where it can and mid-word where it must: a filesystem path or
+/// a URL has no spaces to break at, and those are exactly what the messages
+/// that need wrapping are made of. Found by a settings note reading
+/// `applied, but not saved — /home/…/config.toml could ` — the rest of the
+/// sentence, including *why*, was off the edge of the panel.
+///
+/// Measured in cells, not characters, for the same reason [`elide`] is.
+pub fn wrap(s: &str, width: usize) -> Vec<String> {
+    if width == 0 {
+        return vec![String::new()];
+    }
+    let mut out: Vec<String> = Vec::new();
+    let mut line = String::new();
+
+    for word in s.split_whitespace() {
+        if cells(word) > width {
+            // Longer than a whole line: it has to be cut somewhere, so cut it
+            // where the line ends rather than letting it run off the edge.
+            if !line.is_empty() {
+                out.push(std::mem::take(&mut line));
+            }
+            let mut chunk = String::new();
+            for c in word.chars() {
+                let cw = UnicodeWidthChar::width(c).unwrap_or(0);
+                if cells(&chunk) + cw > width {
+                    out.push(std::mem::take(&mut chunk));
+                }
+                chunk.push(c);
+            }
+            // The tail stays open, so the next word can share its line.
+            line = chunk;
+            continue;
+        }
+
+        let would_be = if line.is_empty() {
+            cells(word)
+        } else {
+            cells(&line) + 1 + cells(word)
+        };
+        if would_be > width {
+            out.push(std::mem::take(&mut line));
+            line.push_str(word);
+        } else {
+            if !line.is_empty() {
+                line.push(' ');
+            }
+            line.push_str(word);
+        }
+    }
+
+    if !line.is_empty() || out.is_empty() {
+        out.push(line);
+    }
+    out
+}
+
 /// Pad or elide to exactly `width` cells, left-aligned.
 fn fit(s: &str, width: usize, icons: Icons) -> String {
     let mut out = elide(s, width, icons);
@@ -739,5 +797,52 @@ mod tests {
         assert_eq!(combining.chars().count(), 4);
         assert_eq!(cells(combining), 3);
         assert_eq!(cells(&fit(combining, 6, icons)), 6);
+    }
+    #[test]
+    fn wrapping_breaks_on_spaces_and_keeps_every_word() {
+        let lines = wrap("the quick brown fox jumps over the lazy dog", 12);
+        assert!(lines.len() > 1);
+        for l in &lines {
+            assert!(cells(l) <= 12, "`{l}` is {} cells", cells(l));
+        }
+        assert_eq!(
+            lines.join(" "),
+            "the quick brown fox jumps over the lazy dog",
+            "wrapping must not lose or reorder words"
+        );
+    }
+
+    /// The case that mattered: a path has no spaces to break at, and a
+    /// settings note is mostly path.
+    #[test]
+    fn a_word_longer_than_the_line_is_cut_rather_than_overflowing() {
+        let path = "/home/shahram/.config/omaghy/config.toml";
+        let lines = wrap(&format!("could not write {path} sorry"), 20);
+        for l in &lines {
+            assert!(cells(l) <= 20, "`{l}` overflowed");
+        }
+        let rejoined: String = lines.join("");
+        assert!(
+            rejoined.contains(".config/omaghy/config.toml"),
+            "the path survives the break: {rejoined}"
+        );
+        assert!(lines.last().unwrap().ends_with("sorry"), "{lines:?}");
+    }
+
+    #[test]
+    fn wrapping_measures_cells_not_characters() {
+        // Four CJK ideographs are eight cells, so they cannot share a line of
+        // six with anything.
+        let lines = wrap("日本語テスト ok", 6);
+        for l in &lines {
+            assert!(cells(l) <= 6, "`{l}` is {} cells", cells(l));
+        }
+    }
+
+    #[test]
+    fn a_short_message_stays_one_line_and_an_empty_one_is_not_nothing() {
+        assert_eq!(wrap("fits", 20), vec!["fits".to_owned()]);
+        assert_eq!(wrap("", 20), vec![String::new()]);
+        assert_eq!(wrap("anything", 0), vec![String::new()]);
     }
 }

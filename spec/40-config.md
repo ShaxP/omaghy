@@ -196,14 +196,7 @@ Editing a TOML file is a poor way to discover that an option exists. Every
 setting in §2 is therefore reachable from a **settings surface** inside omaghy,
 and that surface is how most people will change them.
 
-**Not built.** The reader is (§2.1); this surface is not. Everything below is
-still specification.
-
-The one thing the reader settled for it: `parse` is a pure function of a
-string, living in the `omaghy` binary. The surface will need to read *and
-write* the file from inside `omaghy-tui`, which cannot see that module — so
-moving it is a contract change for the PR that builds this, and deliberately a
-cheap one.
+Built. What follows describes it, with §6.5 recording what building it settled.
 
 **Reached by `,`, and from the command palette.** Deliberately *not* one of the
 numbered surfaces: `1`–`7` address the seven content surfaces of
@@ -265,3 +258,33 @@ currently take free-typed input at all. File-only until that is fixed.
 
 Both exclusions are in §2's file, so nothing is unreachable — only less
 convenient than it will eventually be.
+
+---
+
+### 6.5 What building it settled
+
+**It is a panel, not a surface.** §6.2 asks that changing `rows` redraw the
+inbox *behind* it, which decides the question: the screen underneath keeps
+drawing, and the effect of a change is visible in the frame that makes it.
+`,` opens it, `j`/`k` move, `h`/`l`/`Enter` cycle, `,`/`Esc`/`q` close.
+
+**`[refresh]` cycles a ladder** — 30s, 60s, 120s, 300s, 600s, 1800s — because
+§6.1 cycles values and no surface can take typed input yet (§6.4). The file
+still accepts any positive number of seconds, and a value that is not on the
+ladder cycles to the next one above it rather than jumping to the start.
+
+**The settings moved to `omaghy-tui`; the file I/O did not.** The panel renders
+these settings and must name their types, so `Config` and the parser live
+beside it — every field was already a type that crate knew. Reading and writing
+the file stays in the binary behind a `ConfigWriter` trait, because
+`omaghy-tui` performs no I/O (`CONTRIBUTING.md`) and a small file is not an
+exception. This is the same shape as the `Store` seam and exists for the same
+reason.
+
+**A sixth provenance was needed.** §4's chain has four steps; a row also has to
+say *changed this session* and *changed but not saved*. The second is the one
+that matters: §6.3 keeps a change that could not be written, and without a word
+for it the row would claim a persistence it does not have.
+
+`toml_edit` is now in `[workspace.dependencies]`, as §6.3 said it would need to
+be.
