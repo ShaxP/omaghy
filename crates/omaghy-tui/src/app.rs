@@ -906,6 +906,29 @@ mod tests {
                 "the section's own query: {}",
                 urls[0]
             );
+            // The tab, not just the query. The first version of this test
+            // checked the URL's shape and never which tab it named, so `o` on
+            // a pull-request section opened Issues and nothing noticed.
+            assert!(
+                urls[0].ends_with("&type=pullrequests"),
+                "a `is:pr` section belongs on the pull-request tab: {}",
+                urls[0]
+            );
+        }
+
+        /// And a section that is not about pull requests still opens Issues.
+        #[tokio::test]
+        async fn a_non_pull_request_section_opens_the_issues_tab() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Dashboard, opener.clone()).await;
+            // Third section: "Assigned to me", `is:open assignee:@me`.
+            press(app, 'j').await;
+            press(app, 'j').await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert!(urls[0].contains("assignee"), "{}", urls[0]);
+            assert!(urls[0].ends_with("&type=issues"), "{}", urls[0]);
         }
 
         /// A stub surface has nothing to open, and saying so is different from
