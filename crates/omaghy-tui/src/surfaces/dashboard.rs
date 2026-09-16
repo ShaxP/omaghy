@@ -41,11 +41,11 @@ use ratatui::{
 };
 
 const BINDINGS: &[Binding] = &[
-    Binding::new("dashboard.next", "j / ↓", "next section"),
-    Binding::new("dashboard.prev", "k / ↑", "previous section"),
-    Binding::new("dashboard.open", "Enter", "open this section"),
-    Binding::new("dashboard.first", "g", "first"),
-    Binding::new("dashboard.last", "G", "last"),
+    Binding::new("dashboard.next", "j / ↓", "next section").on(KeyCode::Char('j')),
+    Binding::new("dashboard.prev", "k / ↑", "previous section").on(KeyCode::Char('k')),
+    Binding::new("dashboard.open", "Enter", "open this section").on(KeyCode::Enter),
+    Binding::new("dashboard.first", "g", "first").on(KeyCode::Char('g')),
+    Binding::new("dashboard.last", "G", "last").on(KeyCode::Char('G')),
 ];
 
 /// Cells before the title: cursor, space, section glyph, space. The cursor

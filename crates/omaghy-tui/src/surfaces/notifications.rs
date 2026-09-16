@@ -79,14 +79,14 @@ use time::OffsetDateTime;
 /// surface carries the escape hatch until that is fixed — see the PR's
 /// contract-change request.
 const BINDINGS: &[Binding] = &[
-    Binding::new("notification.next", "j / ↓", "next"),
-    Binding::new("notification.prev", "k / ↑", "previous"),
-    Binding::new("notification.toggle-read", "Enter", "toggle read"),
-    Binding::new("notification.unread-only", "u", "unread only"),
-    Binding::new("notification.filter-repo", "/", "this repo"),
-    Binding::new("notification.page-down", "Ctrl-d", "half page down"),
-    Binding::new("notification.page-up", "Ctrl-u", "half page up"),
-    Binding::new("notification.last", "G", "last"),
+    Binding::new("notification.next", "j / ↓", "next").on(KeyCode::Char('j')),
+    Binding::new("notification.prev", "k / ↑", "previous").on(KeyCode::Char('k')),
+    Binding::new("notification.toggle-read", "Enter", "toggle read").on(KeyCode::Enter),
+    Binding::new("notification.unread-only", "u", "unread only").on(KeyCode::Char('u')),
+    Binding::new("notification.filter-repo", "/", "this repo").on(KeyCode::Char('/')),
+    Binding::new("notification.page-down", "Ctrl-d", "half page down").on_ctrl(KeyCode::Char('d')),
+    Binding::new("notification.page-up", "Ctrl-u", "half page up").on_ctrl(KeyCode::Char('u')),
+    Binding::new("notification.last", "G", "last").on(KeyCode::Char('G')),
 ];
 
 // ---------------------------------------------------------------- variants

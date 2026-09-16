@@ -2,6 +2,7 @@
 
 use crate::surfaces::notifications::Variants;
 use crate::{
+    keys::Binding,
     keys::{self, GLOBAL_BINDINGS, Global},
     route::{Route, SurfaceId},
     surface::{Ctx, Outcome, Surface},
@@ -54,6 +55,8 @@ pub struct App {
     config: crate::config::Config,
     /// Why the last change could not be saved, if it could not (§6.3).
     settings_note: Option<String>,
+    /// The command palette, while it is open (`30-ui.md` §5.1).
+    palette: Option<crate::widgets::Palette>,
     dirty: bool,
     quit: bool,
     status: Option<String>,
@@ -87,6 +90,7 @@ impl App {
             settings: crate::widgets::settings::Settings::new(),
             config: crate::config::Config::default(),
             settings_note: None,
+            palette: None,
             dirty: true,
             quit: false,
             status: None,
@@ -203,6 +207,9 @@ impl App {
             self.dirty = true;
             return Ok(());
         }
+        if self.palette.is_some() {
+            return self.on_palette_key(key).await;
+        }
 
         // A surface taking free text gets everything except the two keys that
         // must always escape, or it would lose most of the alphabet mid-word.
@@ -224,7 +231,7 @@ impl App {
                     self.settings_open = true;
                     self.settings_note = None;
                 }
-                Global::Palette => self.status = Some("Command palette arrives in W1.3".into()),
+                Global::Palette => self.open_palette(),
                 Global::Refresh => match self.top().refresh_target() {
                     // The surface says what `r` means here; App used to
                     // hardcode the inbox, so `r` on the dashboard refreshed
@@ -305,6 +312,74 @@ impl App {
             self.dirty = true;
         }
         Ok(())
+    }
+
+    // ---------------------------------------------------------- palette
+
+    /// Everything runnable from here, by name.
+    ///
+    /// The globals, one entry per surface, and the surface's own keymap — the
+    /// same [`Binding`] slices the footer and the help overlay read, so an
+    /// action cannot exist without being searchable and a searchable action
+    /// cannot fail to exist.
+    fn palette_actions(&mut self) -> Vec<Binding> {
+        let mut actions: Vec<Binding> = keys::GLOBAL_BINDINGS.to_vec();
+        actions.extend(keys::surface_bindings());
+        actions.extend(self.top().keymap().iter().cloned());
+        // `1–7` is a row in the help overlay, not something to search for; the
+        // seven named entries above replace it.
+        actions.retain(|b| b.action != "app.surface");
+        actions
+    }
+
+    fn open_palette(&mut self) {
+        let actions = self.palette_actions();
+        self.palette = Some(crate::widgets::Palette::new(actions).icons(self.ctx.icons));
+    }
+
+    /// Run an action by name.
+    ///
+    /// **By pressing its key.** `30-ui.md` §5.1 requires that anything
+    /// reachable by key be reachable by name; resolving the name to the key
+    /// and replaying it makes that true by construction rather than by a
+    /// second implementation that has to be kept honest. A name with no key
+    /// cannot be run, and a test asserts there are none.
+    async fn run_action(&mut self, action: &str) -> Result<()> {
+        let event = self
+            .palette_actions()
+            .into_iter()
+            .find(|b| b.action == action)
+            .and_then(|b| b.run_event());
+        match event {
+            Some(ev) => Box::pin(self.on_key(ev)).await,
+            None => {
+                self.status = Some(format!("`{action}` has no key to press"));
+                Ok(())
+            }
+        }
+    }
+
+    async fn on_palette_key(&mut self, key: crossterm::event::KeyEvent) -> Result<()> {
+        use crate::widgets::PaletteOutcome;
+
+        let Some(p) = &mut self.palette else {
+            return Ok(());
+        };
+        self.dirty = true;
+        match p.on_key(key) {
+            PaletteOutcome::Consumed => Ok(()),
+            PaletteOutcome::Dismissed => {
+                self.palette = None;
+                Ok(())
+            }
+            PaletteOutcome::Run(action) => {
+                // Closed *before* running: the action may open the settings
+                // panel or push a surface, and both would arrive underneath a
+                // palette that is still on screen.
+                self.palette = None;
+                self.run_action(action).await
+            }
+        }
     }
 
     // --------------------------------------------------------- settings
@@ -453,6 +528,9 @@ impl App {
         if self.settings_open {
             self.settings
                 .render(f, area, &self.config, self.settings_note.as_deref());
+        }
+        if let Some(p) = &self.palette {
+            p.render(f, area);
         }
     }
 
@@ -696,6 +774,146 @@ mod tests {
         }
     }
     // ------------------------------------------------------- the settings panel
+
+    mod palette {
+        use super::super::*;
+        use crossterm::event::KeyEvent;
+        use omaghy_store::{FakeStore, Store};
+        use ratatui::{Terminal, backend::TestBackend};
+
+        async fn app_on(id: SurfaceId) -> App {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW);
+            app.start(Route::surface(id)).await.expect("surface loads");
+            app
+        }
+
+        async fn press(app: &mut App, c: char) {
+            app.on_key(KeyEvent::from(KeyCode::Char(c))).await.unwrap();
+        }
+
+        async fn type_in(app: &mut App, text: &str) {
+            for c in text.chars() {
+                press(app, c).await;
+            }
+        }
+
+        fn draw(app: &mut App) -> String {
+            let mut t = Terminal::new(TestBackend::new(100, 30)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+
+        /// The invariant `30-ui.md` §5.1 is built on: *anything reachable by
+        /// key must be reachable by name*.
+        ///
+        /// Running an action replays its key, so the only way to break this is
+        /// a binding with no key at all. There must be none.
+        #[tokio::test]
+        async fn every_action_the_palette_offers_can_actually_be_run() {
+            for id in [SurfaceId::Dashboard, SurfaceId::Notifications] {
+                let mut app = app_on(id).await;
+                let actions = app.palette_actions();
+                assert!(!actions.is_empty());
+                for b in &actions {
+                    assert!(
+                        b.run_event().is_some(),
+                        "`{}` is offered by name on {id:?} but has no key to press",
+                        b.action
+                    );
+                }
+            }
+        }
+
+        /// The other half of §5.1, from the palette's own side: no action may
+        /// be nameless.
+        #[tokio::test]
+        async fn no_action_is_unreachable_by_name() {
+            let mut app = app_on(SurfaceId::Notifications).await;
+            let actions = app.palette_actions();
+            let bad = crate::widgets::unreachable_by_name(&actions);
+            assert!(bad.is_empty(), "not addressable by name: {bad:?}");
+        }
+
+        #[tokio::test]
+        async fn colon_opens_it_and_it_lists_this_surface_s_actions() {
+            let app = &mut app_on(SurfaceId::Notifications).await;
+            press(app, ':').await;
+            let out = draw(app);
+            assert!(
+                out.contains("notification."),
+                "the inbox's own actions should be there:\n{out}"
+            );
+            assert!(out.contains("app.quit"), "and the globals:\n{out}");
+        }
+
+        /// `40-config.md` §6: settings is reached "by `,`, **and from the
+        /// command palette**".
+        #[tokio::test]
+        async fn settings_is_reachable_by_name() {
+            let app = &mut app_on(SurfaceId::Notifications).await;
+            press(app, ':').await;
+            type_in(app, "settings").await;
+            app.on_key(KeyEvent::from(KeyCode::Enter)).await.unwrap();
+
+            assert!(app.palette.is_none(), "the palette closes behind itself");
+            let out = draw(app);
+            assert!(
+                out.contains("Settings"),
+                "running `app.settings` by name should open the panel:\n{out}"
+            );
+        }
+
+        /// Running by name does exactly what pressing the key does — the
+        /// property that makes replaying the key the right implementation.
+        #[tokio::test]
+        async fn running_an_action_by_name_matches_pressing_its_key() {
+            let by_key = {
+                let app = &mut app_on(SurfaceId::Notifications).await;
+                press(app, 'j').await;
+                press(app, 'j').await;
+                draw(app)
+            };
+            let by_name = {
+                let app = &mut app_on(SurfaceId::Notifications).await;
+                for _ in 0..2 {
+                    press(app, ':').await;
+                    type_in(app, "notification.next").await;
+                    app.on_key(KeyEvent::from(KeyCode::Enter)).await.unwrap();
+                }
+                draw(app)
+            };
+            assert_eq!(by_key, by_name, "the name and the key must agree");
+        }
+
+        /// A surface is reachable by its own name, not by "jump to surface".
+        #[tokio::test]
+        async fn a_surface_can_be_opened_by_name() {
+            let app = &mut app_on(SurfaceId::Notifications).await;
+            press(app, ':').await;
+            type_in(app, "pull-requests").await;
+            app.on_key(KeyEvent::from(KeyCode::Enter)).await.unwrap();
+            assert_eq!(app.current(), Some(SurfaceId::PullRequests));
+        }
+
+        #[tokio::test]
+        async fn escape_closes_it_and_runs_nothing() {
+            let app = &mut app_on(SurfaceId::Notifications).await;
+            let before = draw(app);
+            press(app, ':').await;
+            app.on_key(KeyEvent::from(KeyCode::Esc)).await.unwrap();
+            assert!(app.palette.is_none());
+            assert_eq!(draw(app), before, "dismissing changes nothing");
+        }
+    }
 
     mod settings {
         use super::super::*;
