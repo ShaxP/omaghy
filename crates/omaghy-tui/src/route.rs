@@ -42,6 +42,36 @@ impl SurfaceId {
         }
     }
 
+    /// The palette's name for "go here", stable like every other action name.
+    ///
+    /// Beside [`Self::slug`] rather than derived from it because an action
+    /// name is a contract a config override refers to, and a slug is a route
+    /// in a URL-ish string. They agree today and are free not to.
+    pub fn palette_action(self) -> &'static str {
+        match self {
+            Self::Dashboard => "surface.dashboard",
+            Self::Notifications => "surface.notifications",
+            Self::PullRequests => "surface.pull-requests",
+            Self::Issues => "surface.issues",
+            Self::Actions => "surface.actions",
+            Self::Repositories => "surface.repositories",
+            Self::Search => "surface.search",
+        }
+    }
+
+    /// The number key that jumps here, as the palette shows it.
+    pub fn palette_key(self) -> &'static str {
+        match self {
+            Self::Dashboard => "1",
+            Self::Notifications => "2",
+            Self::PullRequests => "3",
+            Self::Issues => "4",
+            Self::Actions => "5",
+            Self::Repositories => "6",
+            Self::Search => "7",
+        }
+    }
+
     pub fn title(self) -> &'static str {
         match self {
             Self::Dashboard => "Dashboard",

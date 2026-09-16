@@ -14,6 +14,19 @@ pub struct Binding {
     /// How it is shown in help and the footer.
     pub keys: &'static str,
     pub description: &'static str,
+    /// The key the palette presses to run this action.
+    ///
+    /// `30-ui.md` §5.1: anything reachable by key must be reachable by name.
+    /// The cheapest way to *guarantee* that rather than assert it is to make
+    /// the name resolve to the key — so running an action from the palette
+    /// replays this through the same handler a keypress uses, and the two
+    /// cannot drift into doing different things.
+    ///
+    /// `None` means the binding describes a range rather than one key, like
+    /// `1–7`. Those reach the palette another way; see [`SURFACE_BINDINGS`].
+    pub run: Option<KeyCode>,
+    /// Whether [`Self::run`] is held with Control.
+    pub run_ctrl: bool,
 }
 
 impl Binding {
@@ -22,7 +35,37 @@ impl Binding {
             action,
             keys,
             description,
+            run: None,
+            run_ctrl: false,
         }
+    }
+
+    /// The key that runs it. `keys` is for reading; this is for pressing.
+    #[must_use]
+    pub const fn on(mut self, key: KeyCode) -> Self {
+        self.run = Some(key);
+        self
+    }
+
+    #[must_use]
+    pub const fn on_ctrl(mut self, key: KeyCode) -> Self {
+        self.run = Some(key);
+        self.run_ctrl = true;
+        self
+    }
+
+    /// The event to replay to run this action, if it has one.
+    pub fn run_event(&self) -> Option<KeyEvent> {
+        self.run.map(|code| {
+            KeyEvent::new(
+                code,
+                if self.run_ctrl {
+                    KeyModifiers::CONTROL
+                } else {
+                    KeyModifiers::NONE
+                },
+            )
+        })
     }
 }
 
@@ -43,15 +86,40 @@ pub enum Global {
 }
 
 pub const GLOBAL_BINDINGS: &[Binding] = &[
-    Binding::new("app.quit", "q / Ctrl-C", "quit"),
-    Binding::new("app.back", "Esc", "back"),
-    Binding::new("app.help", "?", "this screen"),
-    Binding::new("app.palette", ":", "command palette"),
-    Binding::new("app.settings", ",", "settings"),
-    Binding::new("app.refresh", "r", "refresh"),
-    Binding::new("app.open", "o", "open on github.com"),
+    Binding::new("app.quit", "q / Ctrl-C", "quit").on(KeyCode::Char('q')),
+    Binding::new("app.back", "Esc", "back").on(KeyCode::Esc),
+    Binding::new("app.help", "?", "this screen").on(KeyCode::Char('?')),
+    Binding::new("app.palette", ":", "command palette").on(KeyCode::Char(':')),
+    Binding::new("app.settings", ",", "settings").on(KeyCode::Char(',')),
+    Binding::new("app.refresh", "r", "refresh").on(KeyCode::Char('r')),
+    Binding::new("app.open", "o", "open on github.com").on(KeyCode::Char('o')),
+    // No single key: `1–7` is seven actions wearing one row in the help
+    // overlay. The palette lists them by name instead — see
+    // [`SURFACE_BINDINGS`], which is generated so adding a surface adds its
+    // palette entry too.
     Binding::new("app.surface", "1–7", "jump to surface"),
 ];
+
+/// One palette entry per surface, by name.
+///
+/// "Jump to surface" is not something anyone searches for; "pull requests" is.
+/// Generated from [`SurfaceId::ALL`] so a new surface cannot be added without
+/// becoming reachable by name.
+pub fn surface_bindings() -> Vec<Binding> {
+    crate::route::SurfaceId::ALL
+        .iter()
+        .enumerate()
+        .map(|(i, id)| Binding {
+            action: id.palette_action(),
+            keys: id.palette_key(),
+            description: id.title(),
+            run: Some(KeyCode::Char(
+                char::from_digit(i as u32 + 1, 10).unwrap_or('1'),
+            )),
+            run_ctrl: false,
+        })
+        .collect()
+}
 
 /// Resolve a key to a global action, or `None` to let the surface have it.
 ///
