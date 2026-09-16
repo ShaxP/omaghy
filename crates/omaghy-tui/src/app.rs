@@ -706,16 +706,37 @@ mod tests {
         use std::sync::Mutex;
 
         /// A writer that remembers, and can be told to fail.
-        #[derive(Debug, Default)]
+        #[derive(Debug)]
         struct Recording {
             writes: Mutex<Vec<(String, String, Option<Scalar>)>>,
             fail: bool,
+            error: String,
+        }
+
+        impl Default for Recording {
+            fn default() -> Self {
+                Self {
+                    writes: Mutex::new(Vec::new()),
+                    fail: false,
+                    error: "the disk is read-only".to_owned(),
+                }
+            }
         }
 
         impl Recording {
             fn failing() -> Self {
                 Self {
                     fail: true,
+                    ..Self::default()
+                }
+            }
+
+            /// Fails with the message a read-only config directory really
+            /// produces — long, and mostly path.
+            fn failing_with(error: &str) -> Self {
+                Self {
+                    fail: true,
+                    error: error.to_owned(),
                     ..Self::default()
                 }
             }
@@ -731,7 +752,7 @@ mod tests {
                     .unwrap()
                     .push((section.to_owned(), key.to_owned(), value));
                 if self.fail {
-                    Err("the disk is read-only".to_owned())
+                    Err(self.error.clone())
                 } else {
                     Ok(())
                 }
@@ -906,6 +927,41 @@ mod tests {
                 "it must not fail silently:\n{out}"
             );
             assert!(out.contains("read-only"), "and it names why:\n{out}");
+        }
+
+        /// Reported from a smoke test: the panel showed
+        /// `applied, but not saved — /home/…/config.toml could ` and the rest
+        /// of the sentence — including *why* — was off the edge.
+        ///
+        /// A `Paragraph` does not wrap, so a note longer than the panel was
+        /// simply cut, and the reason is the end of that sentence.
+        #[tokio::test]
+        async fn a_long_failure_reason_wraps_instead_of_being_cut() {
+            let reason = "/home/shahram/.config/omaghy/config.toml could not be \
+                          written: Permission denied (os error 13)";
+            let app = &mut app_with(Arc::new(Recording::failing_with(reason))).await;
+
+            press(app, ',').await;
+            for _ in 0..3 {
+                press(app, 'j').await;
+            }
+            press(app, 'l').await;
+
+            let out = draw(app);
+            assert!(
+                out.contains("Permission denied"),
+                "the reason is the point of the message:\n{out}"
+            );
+            assert!(
+                out.contains("os error 13"),
+                "and it must not stop before the end:\n{out}"
+            );
+            for line in out.lines() {
+                assert!(
+                    line.chars().count() <= 100,
+                    "a line overflowed the terminal: {line}"
+                );
+            }
         }
 
         #[tokio::test]

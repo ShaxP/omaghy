@@ -17,6 +17,7 @@
 use crate::{
     config::{Config, SettingId},
     theme::Role,
+    widgets::list::wrap,
 };
 use ratatui::{
     Frame,
@@ -70,8 +71,18 @@ impl Settings {
     }
 
     /// The panel, drawn over whatever is behind it.
+    ///
+    /// Laid out width-first: the note and the alternatives are wrapped to the
+    /// panel's inner width, and only then is the height counted. Building the
+    /// lines first and sizing afterwards is what let a note run off the edge —
+    /// a `Paragraph` does not wrap, so the half of the sentence that said
+    /// *why* a save failed was simply not drawn.
     pub fn render(self, f: &mut Frame, area: Rect, cfg: &Config, note: Option<&str>) {
-        let mut lines: Vec<Line> = Vec::with_capacity(SettingId::ALL.len() + 6);
+        let w = WANTED_WIDTH.min(area.width);
+        // Two cells of border, two of the indent every line carries.
+        let text_width = (w as usize).saturating_sub(4);
+
+        let mut lines: Vec<Line> = Vec::with_capacity(SettingId::ALL.len() + 8);
         lines.push(Line::styled("  Settings", Role::Accent.style()));
         lines.push(Line::raw(""));
 
@@ -90,19 +101,22 @@ impl Settings {
         lines.push(Line::raw(""));
         // The description of the focused row only: eight of them at once is a
         // wall of text, and the one that matters is the one under the cursor.
-        lines.push(Line::styled(
-            format!("  {}", self.selected().description()),
-            Role::Muted.style(),
-        ));
-        lines.push(Line::styled(
-            format!("  {}", self.alternatives(cfg)),
-            Role::Muted.style(),
-        ));
+        for l in wrap(self.selected().description(), text_width) {
+            lines.push(Line::styled(format!("  {l}"), Role::Muted.style()));
+        }
+        for l in wrap(&self.alternatives(cfg), text_width) {
+            lines.push(Line::styled(format!("  {l}"), Role::Muted.style()));
+        }
         lines.push(Line::raw(""));
         match note {
             // §6.3: a failed write does not refuse the change, and does not
-            // fail silently. This is the "does not fail silently" half.
-            Some(n) => lines.push(Line::styled(format!("  {n}"), Role::Warning.style())),
+            // fail silently. Wrapped, because the part of that sentence worth
+            // reading — the reason — is at the end of it.
+            Some(n) => {
+                for l in wrap(n, text_width) {
+                    lines.push(Line::styled(format!("  {l}"), Role::Warning.style()));
+                }
+            }
             None => lines.push(Line::styled(
                 "  j/k move   h/l or Enter change   , or Esc close",
                 Role::Muted.style(),
@@ -110,7 +124,6 @@ impl Settings {
         }
 
         let h = (lines.len() as u16 + 2).min(area.height);
-        let w = WANTED_WIDTH.min(area.width);
         let r = Rect {
             x: area.x + (area.width.saturating_sub(w)) / 2,
             y: area.y + (area.height.saturating_sub(h)) / 2,
