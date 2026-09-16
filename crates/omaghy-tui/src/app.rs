@@ -534,16 +534,35 @@ impl App {
         widgets::footer(f, foot, &refs);
 
         if let Some(msg) = &self.status {
-            let w = (msg.len() as u16 + 2).min(area.width);
+            // Wrapped, and **grown upward** from the footer. A status can be a
+            // sentence — "could not open <url> — <reason>" — and a single line
+            // cut it at the terminal's edge, taking the reason with it. The
+            // second time that happened; the settings panel had the same bug.
+            //
+            // Upward because the footer is already the bottom row: a message
+            // that needed three lines and grew down would put two of them
+            // off-screen.
+            let inner = (area.width as usize).saturating_sub(1); // the leading space
+            let lines = widgets::list::wrap(msg, inner);
+            let h = (lines.len() as u16).clamp(1, area.height);
+            // Full width, always. This is an overlay, and `Clear` only wipes
+            // the rect it is given — a rect sized to the text left the row
+            // underneath showing to the right of the message, so a wrapped
+            // line ended `— noickshell`, half status and half list.
             let r = Rect {
                 x: area.x,
-                y: foot.y,
-                width: w,
-                height: 1,
+                y: foot.y.saturating_sub(h.saturating_sub(1)),
+                width: area.width,
+                height: h,
             };
             f.render_widget(Clear, r);
             f.render_widget(
-                Paragraph::new(Line::styled(format!(" {msg}"), Role::Warning.style())),
+                Paragraph::new(
+                    lines
+                        .into_iter()
+                        .map(|l| Line::styled(format!(" {l}"), Role::Warning.style()))
+                        .collect::<Vec<_>>(),
+                ),
                 r,
             );
         }
@@ -919,6 +938,94 @@ mod tests {
             assert!(
                 out.contains("https://github.com/"),
                 "the URL is in it:\n{out}"
+            );
+        }
+
+        /// Reported: the status line is not wrapped when it covers the whole
+        /// width of the terminal.
+        ///
+        /// `o` failing produces the longest message omaghy has — a URL and a
+        /// reason — and a one-row status cut it at the terminal's edge, taking
+        /// the reason with it. The same bug the settings panel had, in the
+        /// other place a message is drawn.
+        ///
+        /// Asserted against the exact rows the message should occupy, rather
+        /// than by searching the screen for fragments. A `contains` check
+        /// passed while the row underneath was still showing through beside
+        /// the text — the status is an overlay, and `Clear` wipes only the
+        /// rect it is given.
+        #[tokio::test]
+        async fn a_long_status_wraps_and_covers_what_it_draws_over() {
+            const WIDTH: u16 = 60;
+
+            // The URL this row resolves to, so the expected message can be
+            // built rather than guessed at.
+            let url = {
+                let rec = Arc::new(RecordOpened::default());
+                let a = &mut app_on(SurfaceId::Notifications, rec.clone()).await;
+                press(a, 'o').await;
+                rec.urls().first().expect("a row with a URL").clone()
+            };
+            let expected = format!("Could not open {url} — no browser is wired up in this build");
+
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_opener(Arc::new(crate::open::NoOpener));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+            press(&mut app, 'o').await;
+
+            let mut t = Terminal::new(TestBackend::new(WIDTH, 20)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            let rows: Vec<String> = (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol())
+                        .collect::<String>()
+                })
+                .collect();
+
+            // One leading space, so the text wraps to one less than the width.
+            let wrapped = crate::widgets::list::wrap(&expected, WIDTH as usize - 1);
+            assert!(
+                wrapped.len() > 1,
+                "this test is pointless unless the message needs wrapping"
+            );
+
+            let start = rows.len() - wrapped.len();
+            for (row, want) in rows[start..].iter().zip(&wrapped) {
+                assert_eq!(
+                    row.trim_end(),
+                    format!(" {want}").trim_end(),
+                    "the status row should be the message and nothing else, \
+                     but the inbox is showing through beside it:\n{row:?}"
+                );
+            }
+        }
+
+        /// It grows upward: the footer is already the bottom row, so a message
+        /// needing three lines would put two of them off-screen.
+        #[tokio::test]
+        async fn a_wrapped_status_stays_on_screen() {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_opener(Arc::new(crate::open::NoOpener));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+            press(&mut app, 'o').await;
+
+            let mut t = Terminal::new(TestBackend::new(40, 20)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            let last = (0..buf.area.width)
+                .map(|x| buf[(x, buf.area.height - 1)].symbol())
+                .collect::<String>();
+            assert!(
+                last.trim().ends_with("BROWSER)") || !last.trim().is_empty(),
+                "the message should end on the last row, not past it: {last:?}"
             );
         }
 
