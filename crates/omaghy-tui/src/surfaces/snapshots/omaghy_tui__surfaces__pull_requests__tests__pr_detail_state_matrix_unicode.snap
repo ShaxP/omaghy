@@ -1,0 +1,139 @@
+---
+source: crates/omaghy-tui/src/surfaces/pull_requests.rs
+expression: "state_matrix(Icons::UNICODE, Some(&arg), 12).await"
+---
+── cold · Pull request  quickshell/quickshell#1 ──
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
+  ▘ Loading
+
+── populated · Pull request  quickshell/quickshell#1 · open ──
+Add SocketServer reconnect backoff and idle timeout
+ open quickshell/quickshell#1 · outfoxxed · socket-reconnect → master · +312 −48 · 6 files
+needs your review · nixie commented
+ area:core   needs-review
+
+Checks  2 failed · 2 passed
+   build (x86_64)  success
+   build (aarch64)  success
+   test  failure
+  and 1 commit status not listed here
+
+Reconnects with exponential backoff (250ms → 30s) and drops a client after 60s idle.
+
+── empty · Pull request  quickshell/quickshell#1 ──
+
+
+
+                                               Not here
+
+         GitHub has no pull request at quickshell/quickshell#1, or this token cannot see it.
+
+                                            r  try again
+
+
+
+
+
+── stale · Pull request  quickshell/quickshell#1 · open ──
+Add SocketServer reconnect backoff and idle timeout
+ open quickshell/quickshell#1 · outfoxxed · socket-reconnect → master · +312 −48 · 6 files
+needs your review · nixie commented
+ area:core   needs-review
+
+Checks  2 failed · 2 passed
+   build (x86_64)  success
+   build (aarch64)  success
+   test  failure
+  and 1 commit status not listed here
+
+Reconnects with exponential backoff (250ms → 30s) and drops a client after 60s idle.
+
+── refreshing · Pull request  quickshell/quickshell#1 · open ──
+Add SocketServer reconnect backoff and idle timeout
+ open quickshell/quickshell#1 · outfoxxed · socket-reconnect → master · +312 −48 · 6 files
+needs your review · nixie commented
+ area:core   needs-review
+
+Checks  2 failed · 2 passed
+   build (x86_64)  success
+   build (aarch64)  success
+   test  failure
+  and 1 commit status not listed here
+
+Reconnects with exponential backoff (250ms → 30s) and drops a client after 60s idle.
+
+── offline-with-cache · Pull request  quickshell/quickshell#1 · open ──
+  Offline · showing cached data.
+Add SocketServer reconnect backoff and idle timeout
+ open quickshell/quickshell#1 · outfoxxed · socket-reconnect → master · +312 −48 · 6 files
+needs your review · nixie commented
+ area:core   needs-review
+
+Checks  2 failed · 2 passed
+   build (x86_64)  success
+   build (aarch64)  success
+   test  failure
+  and 1 commit status not listed here
+
+
+── offline-without-cache · Pull request  quickshell/quickshell#1 ──
+
+
+
+                                     Offline, and nothing cached
+
+                   GitHub is unreachable and this surface has never been fetched.
+
+                                            r  try again
+
+
+
+
+
+── rate-limited · Pull request  quickshell/quickshell#1 ──
+
+
+
+                                      GitHub rate limit reached
+
+                         Resets at 12:00 UTC. Cached data is still readable.
+
+                                            r  try again
+
+
+
+
+
+── forbidden · Pull request  quickshell/quickshell#1 ──
+
+
+
+
+                                              No access
+
+                       You do not have access to this. It will not be retried.
+
+
+
+
+
+
+── error · Pull request  quickshell/quickshell#1 ──
+
+
+
+                                           Something failed
+
+                                  GitHub returned 502: bad gateway
+
+                                            r  try again

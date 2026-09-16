@@ -101,7 +101,7 @@ async fn unimplemented_surfaces_say_which_milestone() {
     assert!(out.contains("Not implemented"), "got: {out}");
     assert!(out.contains("M4"));
 
-    let out = screen(store, Route::surface(SurfaceId::PullRequests), 80, 12).await;
+    let out = screen(store, Route::surface(SurfaceId::Issues), 80, 12).await;
     assert!(out.contains("M2"), "got: {out}");
 }
 

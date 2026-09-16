@@ -1,0 +1,291 @@
+---
+source: crates/omaghy-tui/src/surfaces/pull_requests.rs
+expression: out
+---
+── 40 cols · unicode ──
+▸  Short one                          1m
+  Add SocketServer reconnect back…   4m
+   M7 slice 1: light theme + Dark/…  15m
+  Allow the bar's workspace indic…  40m
+   fix: syntax highlighting follow…   2h
+   Stabilize `let_chains` in the 2…   5h
+   Refactor the Wayland layer-shel…   8h
+   fix: tighter markdown spacing i…   2d
+   Ollama per-model tool + vision …   2d
+   spec: notifications inbox domai…   4d
+   Add a Wayland-native screenshot…  1mo
+   M5 slice 3: ls widget (closes M…  2mo
+
+
+
+ ▸ #7 · you requested changes · some-ve…
+
+── 59 cols · unicode ──
+▸  Short one                                             1m
+  Add SocketServer reconnect backoff and idle timeout   4m
+   M7 slice 1: light theme + Dark/Light/System toggle   15m
+  Allow the bar's workspace indicator to be configur…  40m
+   fix: syntax highlighting follows the Dark/Light/Sy…   2h
+   Stabilize `let_chains` in the 2024 edition            5h
+   Refactor the Wayland layer-shell surface lifecycle…   8h
+   fix: tighter markdown spacing in chat bubbles         2d
+   Ollama per-model tool + vision probing (closes M6)    2d
+   spec: notifications inbox domain model                4d
+   Add a Wayland-native screenshot annotator            1mo
+   M5 slice 3: ls widget (closes M5)                    2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organizatio…
+
+── 60 cols · unicode ──
+▸   Short one                                            1m
+   Add SocketServer reconnect backoff and idle timeo…   4m
+    M7 slice 1: light theme + Dark/Light/System toggle  15m
+   Allow the bar's workspace indicator to be configu…  40m
+    fix: syntax highlighting follows the Dark/Light/S…   2h
+    Stabilize `let_chains` in the 2024 edition           5h
+    Refactor the Wayland layer-shell surface lifecycl…   8h
+    fix: tighter markdown spacing in chat bubbles        2d
+    Ollama per-model tool + vision probing (closes M6)   2d
+    spec: notifications inbox domain model               4d
+    Add a Wayland-native screenshot annotator           1mo
+    M5 slice 3: ls widget (closes M5)                   2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organization…
+
+── 79 cols · unicode ──
+▸   Short one                                                               1m
+   Add SocketServer reconnect backoff and idle timeout                     4m
+    M7 slice 1: light theme + Dark/Light/System toggle                     15m
+   Allow the bar's workspace indicator to be configured per monitor, so…  40m
+    fix: syntax highlighting follows the Dark/Light/System toggle           2h
+    Stabilize `let_chains` in the 2024 edition                              5h
+    Refactor the Wayland layer-shell surface lifecycle so that a surface…   8h
+    fix: tighter markdown spacing in chat bubbles                           2d
+    Ollama per-model tool + vision probing (closes M6)                      2d
+    spec: notifications inbox domain model                                  4d
+    Add a Wayland-native screenshot annotator                              1mo
+    M5 slice 3: ls widget (closes M5)                                      2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organization-name/an-equally-lo…
+
+── 80 cols · unicode ──
+▸   Short one                                …/an-equally-long-r…  open     1m
+   Add SocketServer reconnect backoff and … …/quickshell          open     4m
+    M7 slice 1: light theme + Dark/Light/Sy… shax                  open    15m
+   Allow the bar's workspace indicator to … basecamp/omarchy      open    40m
+    fix: syntax highlighting follows the Da… shax                  open     2h
+    Stabilize `let_chains` in the 2024 edit… rust-lang/rust        open     5h
+    Refactor the Wayland layer-shell surfac… …/quickshell          draft    8h
+    fix: tighter markdown spacing in chat b… shax                  merged   2d
+    Ollama per-model tool + vision probing … shax                  merged   2d
+    spec: notifications inbox domain model   omaghy                merged   4d
+    Add a Wayland-native screenshot annotat… basecamp/omarchy      closed  1mo
+    M5 slice 3: ls widget (closes M5)        shax                  merged  2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organization-name/an-equally-lon…
+
+── 99 cols · unicode ──
+▸   Short one                                                   …/an-equally-long-r…  open     1m
+   Add SocketServer reconnect backoff and idle timeout         …/quickshell          open     4m
+    M7 slice 1: light theme + Dark/Light/System toggle          shax                  open    15m
+   Allow the bar's workspace indicator to be configured per m… basecamp/omarchy      open    40m
+    fix: syntax highlighting follows the Dark/Light/System tog… shax                  open     2h
+    Stabilize `let_chains` in the 2024 edition                  rust-lang/rust        open     5h
+    Refactor the Wayland layer-shell surface lifecycle so that… …/quickshell          draft    8h
+    fix: tighter markdown spacing in chat bubbles               shax                  merged   2d
+    Ollama per-model tool + vision probing (closes M6)          shax                  merged   2d
+    spec: notifications inbox domain model                      omaghy                merged   4d
+    Add a Wayland-native screenshot annotator                   basecamp/omarchy      closed  1mo
+    M5 slice 3: ls widget (closes M5)                           shax                  merged  2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organization-name/an-equally-long-repository-name ·…
+
+── 100 cols · unicode ──
+▸   Short one                                      …/an-equally-long-r…     #7  open       1   1m
+   Add SocketServer reconnect backoff and idle t… …/quickshell             #1  open     2/4   4m
+    M7 slice 1: light theme + Dark/Light/System t… shax                    #11  open       3  15m
+   Allow the bar's workspace indicator to be con… basecamp/omarchy      #2305  open       2  40m
+    fix: syntax highlighting follows the Dark/Lig… shax                     #4  open       3   2h
+    Stabilize `let_chains` in the 2024 edition     rust-lang/rust           #6  open       1   5h
+    Refactor the Wayland layer-shell surface life… …/quickshell             #8  draft           8h
+    fix: tighter markdown spacing in chat bubbles  shax                    #12  merged     3   2d
+    Ollama per-model tool + vision probing (close… shax                    #13  merged     3   2d
+    spec: notifications inbox domain model         omaghy                  #16  merged     3   4d
+    Add a Wayland-native screenshot annotator      basecamp/omarchy      #2210  closed   1/1  1mo
+    M5 slice 3: ls widget (closes M5)              shax                    #26  merged     3  2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organization-name/an-equally-long-repository-name · …
+
+── 120 cols · unicode ──
+▸   Short one                                             …/an-equally-long-r…     #7  open       1 colleague      1m
+   Add SocketServer reconnect backoff and idle timeout   …/quickshell             #1  open     2/4 outfoxxed      4m
+    M7 slice 1: light theme + Dark/Light/System toggle    shax                    #11  open       3 ShaxP         15m
+   Allow the bar's workspace indicator to be configured… basecamp/omarchy      #2305  open       2 mrsk-fan      40m
+    fix: syntax highlighting follows the Dark/Light/Syst… shax                     #4  open       3 ShaxP          2h
+    Stabilize `let_chains` in the 2024 edition            rust-lang/rust           #6  open       1 est-c          5h
+    Refactor the Wayland layer-shell surface lifecycle s… …/quickshell             #8  draft         outfoxxed      8h
+    fix: tighter markdown spacing in chat bubbles         shax                    #12  merged     3 ShaxP          2d
+    Ollama per-model tool + vision probing (closes M6)    shax                    #13  merged     3 ShaxP          2d
+    spec: notifications inbox domain model                omaghy                  #16  merged     3 dependabot[…   4d
+    Add a Wayland-native screenshot annotator             basecamp/omarchy      #2210  closed   1/1 ghost         1mo
+    M5 slice 3: ls widget (closes M5)                     shax                    #26  merged     3 ShaxP         2mo
+
+
+
+ ▸ #7 · you requested changes · some-very-long-organization-name/an-equally-long-repository-name · colleague · +1 −1 · …
+
+── 40 cols · ascii ──
+>  Short one                          1m
+ * Add SocketServer reconnect back~   4m
+   M7 slice 1: light theme + Dark/~  15m
+ * Allow the bar's workspace indic~  40m
+   fix: syntax highlighting follow~   2h
+   Stabilize `let_chains` in the 2~   5h
+   Refactor the Wayland layer-shel~   8h
+   fix: tighter markdown spacing i~   2d
+   Ollama per-model tool + vision ~   2d
+   spec: notifications inbox domai~   4d
+   Add a Wayland-native screenshot~  1mo
+   M5 slice 3: ls widget (closes M~  2mo
+
+
+
+ > #7 - you requested changes - some-ve~
+
+── 59 cols · ascii ──
+>  Short one                                             1m
+ * Add SocketServer reconnect backoff and idle timeout   4m
+   M7 slice 1: light theme + Dark/Light/System toggle   15m
+ * Allow the bar's workspace indicator to be configur~  40m
+   fix: syntax highlighting follows the Dark/Light/Sy~   2h
+   Stabilize `let_chains` in the 2024 edition            5h
+   Refactor the Wayland layer-shell surface lifecycle~   8h
+   fix: tighter markdown spacing in chat bubbles         2d
+   Ollama per-model tool + vision probing (closes M6)    2d
+   spec: notifications inbox domain model                4d
+   Add a Wayland-native screenshot annotator            1mo
+   M5 slice 3: ls widget (closes M5)                    2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organizatio~
+
+── 60 cols · ascii ──
+>  o Short one                                            1m
+ * o Add SocketServer reconnect backoff and idle timeo~   4m
+   o M7 slice 1: light theme + Dark/Light/System toggle  15m
+ * o Allow the bar's workspace indicator to be configu~  40m
+   o fix: syntax highlighting follows the Dark/Light/S~   2h
+   o Stabilize `let_chains` in the 2024 edition           5h
+   d Refactor the Wayland layer-shell surface lifecycl~   8h
+   M fix: tighter markdown spacing in chat bubbles        2d
+   M Ollama per-model tool + vision probing (closes M6)   2d
+   M spec: notifications inbox domain model               4d
+   x Add a Wayland-native screenshot annotator           1mo
+   M M5 slice 3: ls widget (closes M5)                   2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organization~
+
+── 79 cols · ascii ──
+>  o Short one                                                               1m
+ * o Add SocketServer reconnect backoff and idle timeout                     4m
+   o M7 slice 1: light theme + Dark/Light/System toggle                     15m
+ * o Allow the bar's workspace indicator to be configured per monitor, so~  40m
+   o fix: syntax highlighting follows the Dark/Light/System toggle           2h
+   o Stabilize `let_chains` in the 2024 edition                              5h
+   d Refactor the Wayland layer-shell surface lifecycle so that a surface~   8h
+   M fix: tighter markdown spacing in chat bubbles                           2d
+   M Ollama per-model tool + vision probing (closes M6)                      2d
+   M spec: notifications inbox domain model                                  4d
+   x Add a Wayland-native screenshot annotator                              1mo
+   M M5 slice 3: ls widget (closes M5)                                      2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organization-name/an-equally-lo~
+
+── 80 cols · ascii ──
+>  o Short one                                ~/an-equally-long-r~ o open     1m
+ * o Add SocketServer reconnect backoff and ~ ~/quickshell         o open     4m
+   o M7 slice 1: light theme + Dark/Light/Sy~ shax                 o open    15m
+ * o Allow the bar's workspace indicator to ~ basecamp/omarchy     o open    40m
+   o fix: syntax highlighting follows the Da~ shax                 o open     2h
+   o Stabilize `let_chains` in the 2024 edit~ rust-lang/rust       o open     5h
+   d Refactor the Wayland layer-shell surfac~ ~/quickshell         d draft    8h
+   M fix: tighter markdown spacing in chat b~ shax                 M merged   2d
+   M Ollama per-model tool + vision probing ~ shax                 M merged   2d
+   M spec: notifications inbox domain model   omaghy               M merged   4d
+   x Add a Wayland-native screenshot annotat~ basecamp/omarchy     x closed  1mo
+   M M5 slice 3: ls widget (closes M5)        shax                 M merged  2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organization-name/an-equally-lon~
+
+── 99 cols · ascii ──
+>  o Short one                                                   ~/an-equally-long-r~ o open     1m
+ * o Add SocketServer reconnect backoff and idle timeout         ~/quickshell         o open     4m
+   o M7 slice 1: light theme + Dark/Light/System toggle          shax                 o open    15m
+ * o Allow the bar's workspace indicator to be configured per m~ basecamp/omarchy     o open    40m
+   o fix: syntax highlighting follows the Dark/Light/System tog~ shax                 o open     2h
+   o Stabilize `let_chains` in the 2024 edition                  rust-lang/rust       o open     5h
+   d Refactor the Wayland layer-shell surface lifecycle so that~ ~/quickshell         d draft    8h
+   M fix: tighter markdown spacing in chat bubbles               shax                 M merged   2d
+   M Ollama per-model tool + vision probing (closes M6)          shax                 M merged   2d
+   M spec: notifications inbox domain model                      omaghy               M merged   4d
+   x Add a Wayland-native screenshot annotator                   basecamp/omarchy     x closed  1mo
+   M M5 slice 3: ls widget (closes M5)                           shax                 M merged  2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organization-name/an-equally-long-repository-name -~
+
+── 100 cols · ascii ──
+>  o Short one                                      ~/an-equally-long-r~     #7 o open   ~    1   1m
+ * o Add SocketServer reconnect backoff and idle t~ ~/quickshell             #1 o open   !  2/4   4m
+   o M7 slice 1: light theme + Dark/Light/System t~ shax                    #11 o open   +    3  15m
+ * o Allow the bar's workspace indicator to be con~ basecamp/omarchy      #2305 o open   ~    2  40m
+   o fix: syntax highlighting follows the Dark/Lig~ shax                     #4 o open   +    3   2h
+   o Stabilize `let_chains` in the 2024 edition     rust-lang/rust           #6 o open   ~    1   5h
+   d Refactor the Wayland layer-shell surface life~ ~/quickshell             #8 d draft           8h
+   M fix: tighter markdown spacing in chat bubbles  shax                    #12 M merged +    3   2d
+   M Ollama per-model tool + vision probing (close~ shax                    #13 M merged +    3   2d
+   M spec: notifications inbox domain model         omaghy                  #16 M merged +    3   4d
+   x Add a Wayland-native screenshot annotator      basecamp/omarchy      #2210 x closed !  1/1  1mo
+   M M5 slice 3: ls widget (closes M5)              shax                    #26 M merged +    3  2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organization-name/an-equally-long-repository-name - ~
+
+── 120 cols · ascii ──
+>  o Short one                                             ~/an-equally-long-r~     #7 o open   ~    1 colleague      1m
+ * o Add SocketServer reconnect backoff and idle timeout   ~/quickshell             #1 o open   !  2/4 outfoxxed      4m
+   o M7 slice 1: light theme + Dark/Light/System toggle    shax                    #11 o open   +    3 ShaxP         15m
+ * o Allow the bar's workspace indicator to be configured~ basecamp/omarchy      #2305 o open   ~    2 mrsk-fan      40m
+   o fix: syntax highlighting follows the Dark/Light/Syst~ shax                     #4 o open   +    3 ShaxP          2h
+   o Stabilize `let_chains` in the 2024 edition            rust-lang/rust           #6 o open   ~    1 est-c          5h
+   d Refactor the Wayland layer-shell surface lifecycle s~ ~/quickshell             #8 d draft         outfoxxed      8h
+   M fix: tighter markdown spacing in chat bubbles         shax                    #12 M merged +    3 ShaxP          2d
+   M Ollama per-model tool + vision probing (closes M6)    shax                    #13 M merged +    3 ShaxP          2d
+   M spec: notifications inbox domain model                omaghy                  #16 M merged +    3 dependabot[~   4d
+   x Add a Wayland-native screenshot annotator             basecamp/omarchy      #2210 x closed !  1/1 ghost         1mo
+   M M5 slice 3: ls widget (closes M5)                     shax                    #26 M merged +    3 ShaxP         2mo
+
+
+
+ > #7 - you requested changes - some-very-long-organization-name/an-equally-long-repository-name - colleague - +1 -1 - ~
