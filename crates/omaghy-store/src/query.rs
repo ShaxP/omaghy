@@ -100,6 +100,59 @@ impl NotificationQuery {
     }
 }
 
+/// What a pull-request list is a list *of*.
+///
+/// GitHub search syntax, because that is the only vocabulary that can say
+/// both "this repository's open PRs" and "everything awaiting my review
+/// across every repository" — and the second is the list a client is for.
+/// `00-overview.md` §2 allowed "repo- or query-scoped"; a repo scope is one
+/// query among others, so the type has one field and [`PrQuery::repo`] is
+/// sugar.
+///
+/// Also the [`RefreshTarget`](crate::RefreshTarget), so the fetcher receives
+/// the query and not a key it would have to parse back.
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+pub struct PrQuery {
+    /// Verbatim from the caller. Read it through [`PrQuery::effective`].
+    pub query: String,
+}
+
+impl PrQuery {
+    /// Any GitHub search string. `is:pr` is implied; see [`Self::effective`].
+    pub fn search(query: impl Into<String>) -> Self {
+        Self {
+            query: query.into(),
+        }
+    }
+
+    /// One repository's open pull requests — what `pr:owner/name` opens.
+    pub fn repo(repo: &RepoRef) -> Self {
+        Self::search(format!("repo:{repo} is:open"))
+    }
+
+    /// The query as it is sent, and as it is keyed.
+    ///
+    /// A pull-request list that returns issues is wrong, so `is:pr` is added
+    /// when the caller left it out. Done here, once, so the key and the fetch
+    /// cannot disagree — and so `search("author:@me")` and
+    /// `search("is:pr author:@me")` are one list, not two fetches.
+    pub fn effective(&self) -> String {
+        let q = self.query.trim();
+        if q.split_whitespace().any(|t| t == "is:pr") {
+            q.to_owned()
+        } else if q.is_empty() {
+            "is:pr".to_owned()
+        } else {
+            format!("is:pr {q}")
+        }
+    }
+
+    /// A stable key for caching and for coalescing refreshes.
+    pub fn cache_key(&self) -> String {
+        format!("prs:{}", self.effective())
+    }
+}
+
 /// One section of the dashboard.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct DashboardSection {
@@ -191,6 +244,44 @@ mod tests {
         assert!(p.is_empty());
         assert_eq!(p.total, Some(0));
         assert!(p.cursor.is_none());
+    }
+
+    #[test]
+    fn a_pr_query_is_always_a_pr_query() {
+        assert_eq!(
+            PrQuery::search("author:@me").effective(),
+            "is:pr author:@me"
+        );
+        assert_eq!(
+            PrQuery::search("is:open is:pr author:@me").effective(),
+            "is:open is:pr author:@me",
+            "already there: left where it was"
+        );
+        assert_eq!(PrQuery::search("  ").effective(), "is:pr");
+        // `is:private` is not `is:pr`; a prefix match would have said it was.
+        assert_eq!(
+            PrQuery::search("is:private").effective(),
+            "is:pr is:private"
+        );
+    }
+
+    #[test]
+    fn two_spellings_of_one_list_share_a_key() {
+        assert_eq!(
+            PrQuery::search("author:@me").cache_key(),
+            PrQuery::search("is:pr author:@me").cache_key()
+        );
+        assert_ne!(
+            PrQuery::search("author:@me").cache_key(),
+            PrQuery::search("review-requested:@me").cache_key()
+        );
+    }
+
+    #[test]
+    fn a_repo_scope_is_a_query_like_any_other() {
+        let q = PrQuery::repo(&RepoRef::new("ShaxP", "shax"));
+        assert_eq!(q.effective(), "is:pr repo:ShaxP/shax is:open");
+        assert!(q.cache_key().starts_with("prs:"));
     }
 
     #[test]

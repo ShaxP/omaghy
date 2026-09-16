@@ -145,6 +145,34 @@ impl SubjectRef {
         })
     }
 
+    /// The coordinate of a pull request, from things a list row already has.
+    pub fn pull_request(repo: &crate::repo::RepoRef, number: u64) -> Self {
+        Self {
+            owner: repo.owner.clone(),
+            repo: repo.name.clone(),
+            kind: SubjectKind::PullRequest,
+            id: SubjectId::Number(number),
+        }
+    }
+
+    /// `owner/repo#61`, the form a route carries (`spec/30-ui.md` §3.2).
+    ///
+    /// The inverse of [`fmt::Display`] for the numbered kinds only; a route
+    /// never names a commit. `kind` is the caller's, because the string does
+    /// not say — `ShaxP/shax#61` is a PR on one surface and an issue on
+    /// another.
+    pub fn parse_numbered(s: &str, kind: SubjectKind) -> Option<Self> {
+        let (full_name, number) = s.trim().split_once('#')?;
+        let repo = crate::repo::RepoRef::parse(full_name)?;
+        let number: u64 = number.parse().ok()?;
+        Some(Self {
+            owner: repo.owner,
+            repo: repo.name,
+            kind,
+            id: SubjectId::Number(number),
+        })
+    }
+
     pub fn full_name(&self) -> String {
         format!("{}/{}", self.owner, self.repo)
     }
@@ -235,6 +263,39 @@ mod tests {
             "",
         ] {
             assert_eq!(SubjectRef::from_api_url(url), None, "should reject {url}");
+        }
+    }
+
+    #[test]
+    fn a_route_coordinate_round_trips_through_display() {
+        let r = SubjectRef::parse_numbered("ShaxP/shax#61", SubjectKind::PullRequest).unwrap();
+        assert_eq!(r.to_string(), "ShaxP/shax#61");
+        assert_eq!(r.kind, SubjectKind::PullRequest);
+        assert_eq!(r.id, SubjectId::Number(61));
+        assert_eq!(
+            r,
+            SubjectRef::pull_request(&crate::repo::RepoRef::new("ShaxP", "shax"), 61)
+        );
+        // The same string is an issue when the surface says so.
+        let i = SubjectRef::parse_numbered("ShaxP/shax#61", SubjectKind::Issue).unwrap();
+        assert_eq!(i.kind, SubjectKind::Issue);
+    }
+
+    #[test]
+    fn a_route_coordinate_rejects_what_is_not_one() {
+        for s in [
+            "ShaxP/shax",
+            "ShaxP/shax#",
+            "ShaxP/shax#x",
+            "shax#61",
+            "a/b/c#1",
+            "",
+        ] {
+            assert_eq!(
+                SubjectRef::parse_numbered(s, SubjectKind::PullRequest),
+                None,
+                "should reject {s:?}"
+            );
         }
     }
 }

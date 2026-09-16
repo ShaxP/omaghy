@@ -13,20 +13,20 @@
 use crate::{
     Cache, Clock, EntityKind, ListMeta, NOTIFICATIONS_LIST, RecordIntent, Remote, SCHEMA_VERSION,
     SqliteStore, Stored, Validators, cache::NOTIFICATIONS_LIST as INBOX, dashboard_list_key,
-    schema::Opened, ttl,
+    pr_detail_key, schema::Opened, ttl,
 };
 use async_trait::async_trait;
 use omaghy_model::{
     Actor, AuthError, Block, CacheError, CheckConclusion, CheckRollup, CheckRun, CheckStatus,
     CommitStatus, Enrichment, Issue, IssueState, IssueStateReason, Label, Markdown, Mergeable,
-    NodeId, Notification, NotificationId, NotificationReason, PrDisplayStatus, PrState,
+    NodeId, Notification, NotificationId, NotificationReason, PrDetail, PrDisplayStatus, PrState,
     PullRequest, Reactions, Repo, RepoRef, Result, ReviewDecision, ReviewState, ReviewSummary, Rgb,
     RollupState, SpanStyle, StatusState, StoreError, StyledSpan, SubjectDetail, SubjectId,
     SubjectKind, SubjectRef, SubjectStatus, TimelineEvent, TimelineKind,
 };
 use omaghy_store::{
     Fresh, RefreshTarget, Source, Store, StoreEvent, Viewer,
-    query::{DashboardConfig, DashboardSection, NotificationQuery, Page, ReadFilter},
+    query::{DashboardConfig, DashboardSection, NotificationQuery, Page, PrQuery, ReadFilter},
 };
 use serde::{Serialize, de::DeserializeOwned};
 use std::path::{Path, PathBuf};
@@ -1179,6 +1179,48 @@ fn rollup() -> CheckRollup {
     )
 }
 
+fn pull_request(number: u64) -> PullRequest {
+    PullRequest {
+        node_id: NodeId(format!("PR_{number}")),
+        number,
+        repo: RepoRef::new("ShaxP", "shax"),
+        title: format!("pull request {number}"),
+        author: Some(actor()),
+        state: PrState::Open,
+        is_draft: false,
+        mergeable: Mergeable::Mergeable,
+        labels: vec![label()],
+        review: ReviewSummary::default(),
+        checks: CheckRollup::empty(),
+        comment_count: 0,
+        additions: 1,
+        deletions: 1,
+        changed_files: 1,
+        created_at: NOW - Duration::days(1),
+        updated_at: NOW - Duration::minutes(number as i64),
+    }
+}
+
+fn pr_detail(number: u64) -> PrDetail {
+    let mut pr = pull_request(number);
+    pr.checks = rollup();
+    PrDetail {
+        pr,
+        body: markdown(),
+        base_ref: "main".into(),
+        head_ref: format!("feat/{number}"),
+        timeline: timeline_kinds()
+            .into_iter()
+            .map(|kind| TimelineEvent {
+                node_id: None,
+                actor: Some(actor()),
+                at: NOW,
+                kind,
+            })
+            .collect(),
+    }
+}
+
 fn subject_detail() -> SubjectDetail {
     SubjectDetail {
         number: Some(61),
@@ -1599,6 +1641,8 @@ fn every_model_type_survives_a_round_trip_through_storage() {
         ],
     );
 
+    roundtrip(&cache, "pr-detail", &pr_detail(61));
+
     // Content and timeline.
     roundtrip(&cache, "markdown", &markdown());
     roundtrip(&cache, "empty-markdown", &Markdown::from_source(""));
@@ -1731,9 +1775,174 @@ async fn the_store_is_usable_through_the_trait_object_the_tui_sees() {
         .notifications(&NotificationQuery::default())
         .await
         .unwrap();
+    let _: Fresh<Page<PullRequest>> = s
+        .pull_requests(&PrQuery::search("author:@me"))
+        .await
+        .unwrap();
+    let _: Fresh<Option<PrDetail>> = s
+        .pull_request(&pull_request(1).subject_ref())
+        .await
+        .unwrap();
     let _ = s.subscribe();
     s.refresh(RefreshTarget::Notifications);
     s.cancel(&RefreshTarget::Notifications);
+}
+
+// ------------------------------------------------- pull requests (M2 contract)
+
+#[tokio::test]
+async fn a_pull_request_list_is_read_by_its_query_key_and_skips_missing_bodies() {
+    let s = store("ShaxP");
+    let q = PrQuery::search("author:@me");
+    let ids: Vec<NodeId> = [1, 2, 3].map(|n| pull_request(n).node_id).to_vec();
+
+    // Never fetched: empty and cold, not an error.
+    let cold = s.pull_requests(&q).await.unwrap();
+    assert!(cold.value.is_empty() && cold.fetched_at.is_none() && cold.stale);
+
+    s.with_cache(|c| {
+        for n in [1, 2] {
+            c.put_entity(
+                EntityKind::PullRequest,
+                &pull_request(n).node_id,
+                &pull_request(n),
+                &Validators::default(),
+                NOW,
+            )?;
+        }
+        // Row 3 is listed but its body is not there.
+        c.put_list(
+            &q.cache_key(),
+            &ids,
+            &ListMeta {
+                total: Some(40),
+                cursor: Some("Y3Vyc29y".into()),
+                complete: false,
+                ..ListMeta::complete_at(NOW - Duration::minutes(1))
+            },
+        )
+    })
+    .unwrap();
+
+    let page = s.pull_requests(&q).await.unwrap();
+    let numbers: Vec<_> = page.value.items.iter().map(|p| p.number).collect();
+    assert_eq!(
+        numbers,
+        vec![1, 2],
+        "in list order, minus the row with no body"
+    );
+    assert_eq!(
+        page.value.total,
+        Some(40),
+        "how many match, not how many we hold"
+    );
+    assert_eq!(page.value.cursor.as_deref(), Some("Y3Vyc29y"));
+    assert!(!page.stale && page.fetched_at.is_some());
+
+    // Two spellings of one list read the same rows.
+    let same = s
+        .pull_requests(&PrQuery::search("is:pr author:@me"))
+        .await
+        .unwrap();
+    assert_eq!(same.value.items, page.value.items);
+
+    // And a different query is a different list, however similar.
+    let other = s
+        .pull_requests(&PrQuery::search("review-requested:@me"))
+        .await
+        .unwrap();
+    assert!(other.value.is_empty());
+}
+
+#[tokio::test]
+async fn a_pull_request_list_goes_stale_on_the_list_clock() {
+    let s = store("ShaxP");
+    let q = PrQuery::search("author:@me");
+    s.with_cache(|c| {
+        c.put_list(
+            &q.cache_key(),
+            &[],
+            &ListMeta::complete_at(NOW - ttl::LIST - Duration::seconds(1)),
+        )
+    })
+    .unwrap();
+    let page = s.pull_requests(&q).await.unwrap();
+    assert!(page.stale, "past the list TTL");
+    assert!(page.fetched_at.is_some(), "stale, not cold");
+}
+
+#[tokio::test]
+async fn a_detail_is_keyed_by_coordinate_and_expires_on_its_own_clock() {
+    let s = store("ShaxP");
+    let detail = pr_detail(61);
+    let r = detail.pr.subject_ref();
+
+    // Never held: `None`, cold — not "does not exist".
+    let cold = s.pull_request(&r).await.unwrap();
+    assert!(cold.value.is_none() && cold.fetched_at.is_none());
+
+    // The row and the detail are different entities under different keys, so
+    // storing one never clobbers the other.
+    s.with_cache(|c| {
+        c.put_entity(
+            EntityKind::PullRequest,
+            &detail.pr.node_id,
+            &detail.pr,
+            &Validators::default(),
+            NOW,
+        )?;
+        c.put_entity(
+            EntityKind::PullRequestDetail,
+            &pr_detail_key(&r),
+            &detail,
+            &Validators::default(),
+            NOW - ttl::DETAIL - Duration::seconds(1),
+        )
+    })
+    .unwrap();
+
+    let opened = s.pull_request(&r).await.unwrap();
+    assert_eq!(opened.value.as_ref(), Some(&detail));
+    assert!(
+        opened.stale,
+        "past the detail TTL, which is shorter than the list's"
+    );
+    assert!(ttl::DETAIL < ttl::LIST);
+
+    let row: Stored<PullRequest> = s
+        .with_cache(|c| c.entity(&detail.pr.node_id))
+        .unwrap()
+        .expect("the row is still there");
+    assert_eq!(row.value, detail.pr);
+
+    // The key is the coordinate a route carries, so it can be computed before
+    // any fetch and is the same from every side.
+    assert_eq!(
+        pr_detail_key(&r),
+        pr_detail_key(
+            &SubjectRef::parse_numbered("ShaxP/shax#61", SubjectKind::PullRequest).unwrap()
+        )
+    );
+}
+
+#[tokio::test]
+async fn pull_request_reads_report_their_own_refresh_in_flight() {
+    let s = store("ShaxP");
+    let q = PrQuery::search("author:@me");
+    let r = pull_request(1).subject_ref();
+
+    s.refresh(RefreshTarget::PullRequests(q.clone()));
+    assert!(s.pull_requests(&q).await.unwrap().refreshing);
+    assert!(
+        !s.pull_request(&r).await.unwrap().refreshing,
+        "a list refresh is not a detail refresh"
+    );
+
+    s.refresh(RefreshTarget::PullRequest(r.clone()));
+    assert!(s.pull_request(&r).await.unwrap().refreshing);
+
+    s.refresh_finished(RefreshTarget::PullRequests(q.clone()));
+    assert!(!s.pull_requests(&q).await.unwrap().refreshing);
 }
 
 #[test]

@@ -7,14 +7,20 @@
 //! See `spec/10-domain-model.md` §3.1.
 
 use crate::{
-    actor::Actor, checks::CheckRollup, ids::NodeId, label::Label, repo::RepoRef,
+    actor::Actor,
+    checks::CheckRollup,
+    content::Markdown,
+    ids::{NodeId, SubjectRef},
+    label::Label,
+    repo::RepoRef,
     review::ReviewSummary,
+    timeline::TimelineEvent,
 };
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 
 /// Verified against the live schema: there is no `Draft` variant.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum PrState {
     Open,
@@ -22,7 +28,7 @@ pub enum PrState {
     Merged,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum Mergeable {
     Mergeable,
@@ -32,7 +38,7 @@ pub enum Mergeable {
 
 /// What a surface actually renders — `state` and `is_draft` collapsed into the
 /// four cases a reader recognises.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum PrDisplayStatus {
     Draft,
@@ -88,6 +94,36 @@ impl PullRequest {
             PrState::Closed => PrDisplayStatus::Closed,
         }
     }
+
+    /// The coordinate a list row hands to the detail view, and to `o`.
+    ///
+    /// Derivable without a fetch, which is the point: a row can be opened
+    /// from a list that was read from cache offline.
+    pub fn subject_ref(&self) -> SubjectRef {
+        SubjectRef::pull_request(&self.repo, self.number)
+    }
+}
+
+/// A pull request opened: the list row plus what only the detail view shows.
+///
+/// The row is embedded rather than flattened so that a detail fetch can
+/// refresh the row every list holds, and so the two cannot disagree about
+/// state, checks or review — a detail that said "approved" over a list that
+/// said "changes requested" would be two facts where there is one.
+///
+/// `pr.checks.runs` is populated here and empty in list contexts
+/// (`CheckRollup`). Files are deliberately absent: a diff is fetched by REST,
+/// is large, and expires on its own clock, so it will be a separate read
+/// rather than a field that makes every detail fetch pay for it.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PrDetail {
+    pub pr: PullRequest,
+    pub body: Markdown,
+    /// Branch names, as GitHub shows them: `head_ref` → `base_ref`.
+    pub base_ref: String,
+    pub head_ref: String,
+    /// Oldest first, as GitHub's timeline connection returns it.
+    pub timeline: Vec<TimelineEvent>,
 }
 
 #[cfg(test)]
@@ -127,6 +163,16 @@ mod tests {
         assert_eq!(
             pr(PrState::Open, false).display_status(),
             PrDisplayStatus::Open
+        );
+    }
+
+    #[test]
+    fn a_row_knows_its_own_coordinate() {
+        let r = pr(PrState::Open, false).subject_ref();
+        assert_eq!(r.to_string(), "ShaxP/shax#61");
+        assert_eq!(
+            r.browser_url().as_deref(),
+            Some("https://github.com/ShaxP/shax/pull/61")
         );
     }
 

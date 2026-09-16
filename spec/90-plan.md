@@ -133,6 +133,44 @@ Later milestones follow the same shape: surfaces are independent, so M2's PRs
 and Issues surfaces parallelize cleanly; M3's write actions do not, because they
 all touch mutation paths in `omaghy-api`.
 
+### M2 — pull requests
+
+```
+Contract  ──►  Wave 1  ──►  Wave 2
+```
+
+**Contract** — one PR, merged alone (`CONTRIBUTING.md`): `PrDetail` and
+`PullRequest::subject_ref` in `omaghy-model`; `PrQuery`, the two `Store`
+reads and `RefreshTarget::PullRequests(PrQuery)` in `omaghy-store`; the
+twelve-PR corpus in `FakeStore`; the reads on `SqliteStore` and the detail key
+in `omaghy-cache`. Specified in `20-store.md` §1.1.
+
+**Wave 1** — three agents, no shared paths, all against what the contract
+landed:
+
+| | Owns | Delivers |
+|---|---|---|
+| M2.1 | `omaghy-api` | The list query (search → `PullRequest` rows) and the detail query (`PrDetail`, timeline union flattened into `TimelineKind`), with cassettes |
+| M2.2 | `omaghy-cache` + `omaghy-sync` | The two job arms: list → `put_list` under `PrQuery::cache_key` + row entities; detail → `pr_detail_key` entity, and the row refreshed beside it. `NotFound` reported as `RefreshFailed` |
+| M2.3 | `omaghy-tui/src/surfaces/pull_requests.rs` | List → detail: conversation and checks, against `FakeStore`. Markdown rendered as wrapped source. Routes per `30-ui.md` §3.2 |
+
+Two one-line changes outside those paths are part of this wave and are named
+here so they do not happen by accident: `Enter` on a PR notification pushes
+`pr:owner/repo#n` (`notifications.rs`), and the dashboard's `is:pr` sections
+push `pr?q=…` instead of `search?q=…` (`dashboard.rs`). Each lands in its own
+small PR by the owner of that surface.
+
+**Wave 2** — each its own unit, each preceded by its own dependency PR
+(§2.1), because both need a crate P0.2 did not declare:
+
+| | Delivers |
+|---|---|
+| M2.4 | Markdown parsed in `omaghy-model` (`pulldown-cmark`), rendered as blocks |
+| M2.5 | The files tab: a REST diff fetch, `FileDiff` in the model, a separate `Store` read on its own TTL. Highlighting (`syntect`) is a further decision, not assumed |
+
+Issues follow the same three-plus-two shape once pull requests are on screen,
+and mostly by copying.
+
 ---
 
 ## 5. Contract changes

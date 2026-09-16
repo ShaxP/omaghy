@@ -20,5 +20,5 @@ pub mod store;
 pub use event::{RefreshTarget, StoreEvent};
 pub use fake::FakeStore;
 pub use fresh::{Fresh, Source};
-pub use query::{DashboardConfig, DashboardSection, NotificationQuery, Page, ReadFilter};
+pub use query::{DashboardConfig, DashboardSection, NotificationQuery, Page, PrQuery, ReadFilter};
 pub use store::{Dashboard, DashboardSectionData, Store, Viewer};

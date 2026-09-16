@@ -3,6 +3,7 @@
 //!
 //! See `spec/20-store.md` §1.
 
+use crate::query::PrQuery;
 use omaghy_model::{LimitKind, StoreError, SubjectRef};
 use time::OffsetDateTime;
 
@@ -13,9 +14,10 @@ pub enum RefreshTarget {
     Notifications,
     /// Second-pass enrichment for a page of notifications.
     NotificationDetails,
-    PullRequests {
-        key: String,
-    },
+    /// The query itself, not its key: the fetcher needs the search string,
+    /// and a key it would have to parse back is a key it will parse wrong.
+    /// Coalescing still works because [`PrQuery`] is `Eq` and `Hash`.
+    PullRequests(PrQuery),
     PullRequest(SubjectRef),
     Issues {
         key: String,
@@ -99,10 +101,8 @@ mod tests {
         assert!(a.coalesces_with(&RefreshTarget::Notifications));
         assert!(!a.coalesces_with(&RefreshTarget::Dashboard));
 
-        let pr = |n: u64| RefreshTarget::PullRequests {
-            key: format!("k{n}"),
-        };
-        assert!(pr(1).coalesces_with(&pr(1)));
-        assert!(!pr(1).coalesces_with(&pr(2)));
+        let pr = |q: &str| RefreshTarget::PullRequests(PrQuery::search(q));
+        assert!(pr("author:@me").coalesces_with(&pr("author:@me")));
+        assert!(!pr("author:@me").coalesces_with(&pr("review-requested:@me")));
     }
 }

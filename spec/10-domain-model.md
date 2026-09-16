@@ -73,6 +73,13 @@ notification still offers a useful action.
 API but by tag on the web, so the two are not interconvertible without a fetch.
 A release notification opens nothing until enrichment lands.
 
+> **Added for M2.** A `SubjectRef` is also what a route carries —
+> `pr:ShaxP/shax#61` (`30-ui.md` §3.2) — and what a list row hands to the
+> detail view. So it is constructible from those two directions as well as
+> from an API URL: `SubjectRef::pull_request(&repo, number)` from a row, and
+> `SubjectRef::parse_numbered("ShaxP/shax#61", kind)` from a route, where the
+> kind is the surface's to supply because the string does not say.
+
 ---
 
 ## 3. Core entities
@@ -133,8 +140,31 @@ pub struct PullRequest {
 
 ```rust
 pub enum PrDisplayStatus { Draft, Open, Merged, Closed }
-impl PullRequest { pub fn display_status(&self) -> PrDisplayStatus { … } }
+impl PullRequest {
+    pub fn display_status(&self) -> PrDisplayStatus { … }
+    pub fn subject_ref(&self) -> SubjectRef { … }     // what a row hands to detail, and to `o`
+}
 ```
+
+A pull request *opened* is the row plus what only the detail view shows:
+
+```rust
+pub struct PrDetail {
+    pub pr: PullRequest,                 // checks.runs populated here, empty in lists
+    pub body: Markdown,
+    pub base_ref: String,                // branch names: head_ref → base_ref
+    pub head_ref: String,
+    pub timeline: Vec<TimelineEvent>,    // oldest first, as GitHub returns it
+}
+```
+
+The row is embedded, not flattened, so a detail fetch refreshes the row every
+list holds and the two cannot disagree about state, checks or review. Files
+are deliberately absent: a diff is fetched by REST, is large, and expires on
+its own clock (`20-store.md` §4), so it will be a separate read rather than a
+field that makes every detail fetch pay for it. Assignees and milestone are
+absent too — not because a detail view will never show them, but because
+nothing renders them yet and a field nobody reads is a field nobody checked.
 
 `Issue` mirrors this with `IssueState { Open, Closed }` plus
 `state_reason: Option<Completed | NotPlanned | Reopened | Duplicate>` — because

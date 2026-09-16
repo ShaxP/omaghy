@@ -11,10 +11,10 @@
 use crate::{
     event::{RefreshTarget, StoreEvent},
     fresh::Fresh,
-    query::{DashboardConfig, NotificationQuery, Page},
+    query::{DashboardConfig, NotificationQuery, Page, PrQuery},
 };
 use async_trait::async_trait;
-use omaghy_model::{Notification, NotificationId, Result};
+use omaghy_model::{Notification, NotificationId, PrDetail, PullRequest, Result, SubjectRef};
 use tokio::sync::broadcast;
 
 /// Who we are acting as. Every cache row is keyed by this: `i_am_requested`,
@@ -46,11 +46,11 @@ pub struct Dashboard {
     pub sections: Vec<DashboardSectionData>,
 }
 
-/// The M1 surface of the store.
+/// The M1 surface of the store, plus M2's pull requests.
 ///
-/// Pull requests, issues, actions, repositories and search join this trait in
-/// M2–M4. They are deliberately absent rather than stubbed: a method nothing
-/// implements is a contract nobody has checked.
+/// Issues, actions, repositories and search join this trait in M2–M4. They
+/// are deliberately absent rather than stubbed: a method nothing implements
+/// is a contract nobody has checked.
 #[async_trait]
 pub trait Store: Send + Sync + 'static {
     /// Change notification. Events name what changed and carry no data.
@@ -63,6 +63,17 @@ pub trait Store: Send + Sync + 'static {
     async fn dashboard(&self, cfg: &DashboardConfig) -> Result<Fresh<Dashboard>>;
 
     async fn notifications(&self, q: &NotificationQuery) -> Result<Fresh<Page<Notification>>>;
+
+    /// The rows for a query. Empty and never fetched on a cold cache, which
+    /// `Fresh` says; refresh with `RefreshTarget::PullRequests(q)`.
+    async fn pull_requests(&self, q: &PrQuery) -> Result<Fresh<Page<PullRequest>>>;
+
+    /// One pull request, opened. `None` means the cache has never held it —
+    /// **not** that it does not exist. A detail that has been fetched and
+    /// found missing is a `RefreshFailed` with `StoreError::NotFound`, and
+    /// the surface hears about it by subscribing, as it does for every other
+    /// fetch outcome.
+    async fn pull_request(&self, r: &SubjectRef) -> Result<Fresh<Option<PrDetail>>>;
 
     // ---- refresh: schedules and returns ---------------------------------
 

@@ -43,8 +43,10 @@ pub use label::{Label, Rgb};
 pub use notification::{
     Enrichment, Notification, NotificationReason, SubjectDetail, SubjectStatus,
 };
-pub use pull_request::{Mergeable, PrDisplayStatus, PrState, PullRequest};
+pub use pull_request::{Mergeable, PrDetail, PrDisplayStatus, PrState, PullRequest};
 pub use repo::{Repo, RepoRef};
 pub use review::{ReviewDecision, ReviewState, ReviewSummary};
-pub use timeline::{Reactions, TimelineEntry, TimelineEvent, TimelineKind};
+pub use timeline::{
+    Reactions, ReviewThread, ThreadComment, TimelineEntry, TimelineEvent, TimelineKind, fold,
+};
 pub use validators::Validators;

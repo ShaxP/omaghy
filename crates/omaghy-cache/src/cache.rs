@@ -12,7 +12,7 @@
 //! wrong answer rather than a missing one.
 
 use crate::error;
-use omaghy_model::{CacheError, Enrichment, NodeId, Notification, NotificationId};
+use omaghy_model::{CacheError, Enrichment, NodeId, Notification, NotificationId, SubjectRef};
 use omaghy_store::query::{NotificationQuery, ReadFilter};
 use rusqlite::types::Value;
 use rusqlite::{Connection, OptionalExtension, params_from_iter};
@@ -40,11 +40,25 @@ pub fn dashboard_list_key(query: &str) -> String {
     format!("dashboard:{query}")
 }
 
+/// The `entities` key under which a pull request's *detail* is stored.
+///
+/// Not its node id: the row (`EntityKind::PullRequest`) already lives there,
+/// and the two are different shapes fetched on different clocks. A detail is
+/// looked up by the coordinate a route carries — `owner/repo#61` — which is
+/// known before any fetch, so the key is derived from that and nothing has to
+/// map a coordinate to a node id first.
+pub fn pr_detail_key(r: &SubjectRef) -> NodeId {
+    NodeId(format!("pr-detail:{r}"))
+}
+
 /// What kind of thing a row in `entities` is. Stored so a future sweep can
 /// expire by kind without deserializing every body.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum EntityKind {
+    /// A list row: `PullRequest`.
     PullRequest,
+    /// The opened form: `PrDetail`, under [`pr_detail_key`].
+    PullRequestDetail,
     Issue,
     Repo,
     CheckRuns,
@@ -57,6 +71,7 @@ impl EntityKind {
     pub fn as_str(self) -> &'static str {
         match self {
             Self::PullRequest => "pr",
+            Self::PullRequestDetail => "pr_detail",
             Self::Issue => "issue",
             Self::Repo => "repo",
             Self::CheckRuns => "checks",

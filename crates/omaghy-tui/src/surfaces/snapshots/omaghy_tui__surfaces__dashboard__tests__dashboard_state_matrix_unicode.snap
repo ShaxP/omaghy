@@ -15,8 +15,8 @@ expression: "state_matrix(Icons::UNICODE).await"
   ▘ Loading
 
 ── populated · Dashboard  4 of 4 sections need you ──
-▸  Needs my review                                                                    1
-   My pull requests                                                                   1
+▸  Needs my review                                                                    3
+   My pull requests                                                                   2
    Assigned to me                                                                     1
    Recently mentioned                                                                 2
 
@@ -39,8 +39,8 @@ expression: "state_matrix(Icons::UNICODE).await"
 
 
 ── stale · Dashboard  4 of 4 sections need you · cached ──
-▸  Needs my review                                                                    1
-   My pull requests                                                                   1
+▸  Needs my review                                                                    3
+   My pull requests                                                                   2
    Assigned to me                                                                     1
    Recently mentioned                                                                 2
 
@@ -51,8 +51,8 @@ expression: "state_matrix(Icons::UNICODE).await"
 
 
 ── refreshing · Dashboard  4 of 4 sections need you · cached ──
-▸  Needs my review                                                                    1
-   My pull requests                                                                   1
+▸  Needs my review                                                                    3
+   My pull requests                                                                   2
    Assigned to me                                                                     1
    Recently mentioned                                                                 2
 
@@ -64,8 +64,8 @@ expression: "state_matrix(Icons::UNICODE).await"
 
 ── offline-with-cache · Dashboard  4 of 4 sections need you ──
   Offline · showing cached data.
-▸  Needs my review                                                                    1
-   My pull requests                                                                   1
+▸  Needs my review                                                                    3
+   My pull requests                                                                   2
    Assigned to me                                                                     1
    Recently mentioned                                                                 2
 

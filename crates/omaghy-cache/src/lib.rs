@@ -41,7 +41,7 @@ mod tests;
 
 pub use cache::{
     Cache, EntityKind, KV_POLL_INTERVAL, ListMeta, NOTIFICATIONS_LIST, Stored, Validators,
-    dashboard_list_key,
+    dashboard_list_key, pr_detail_key,
 };
 pub use remote::{RecordIntent, Remote};
 pub use schema::{Opened, SCHEMA_VERSION};
