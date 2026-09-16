@@ -206,6 +206,9 @@ async fn run() -> Result<(), Boxed> {
     if want(&only, "search_counts") {
         record_search_counts(&client, &recorder).await?;
     }
+    if want(&only, "pull_request") {
+        record_pull_requests(&client, &recorder).await?;
+    }
     if want(&only, "graphql") {
         record_graphql(&client, &recorder).await?;
     }
@@ -474,6 +477,66 @@ async fn record_search_counts(
         "Three aliased searches in one request, over a public repository. The \
          third names a repository that does not exist: GitHub answers 0 with no \
          error, which is why a dashboard count cannot detect a bad query.",
+        recorder.drain(),
+    )
+}
+
+/// The PR this repository's own history offers as a detail fixture: merged,
+/// with a commit, a merge, the close GitHub records beside it, a
+/// cross-reference from a later PR, a deleted head ref, and check runs on
+/// the head commit. No review or thread — nobody reviews here but the
+/// author, and a fixture with a review on it would need someone else's
+/// public PR, which the constructed stub in `tests/pull_requests.rs` stands
+/// in for instead.
+const DETAIL_PR: u64 = 34;
+
+async fn record_pull_requests(
+    client: &GitHubClient,
+    recorder: &RecordingTransport,
+) -> Result<(), Boxed> {
+    println!("POST /graphql — a page of pull requests");
+    let query = format!("repo:{OWNER}/{SEARCH_REPO} is:pr");
+    let page = client.pull_requests().list(&query, None).await?;
+    println!(
+        "  {} rows of {}, next cursor: {:?}",
+        page.items.len(),
+        page.total,
+        page.next_cursor
+    );
+    write(
+        "pull_request_list",
+        "The first page of `repo:ShaxP/omaghy is:pr`, thirty rows with labels, \
+         latest reviews and the head commit's rollup state. The repository has \
+         more than thirty, so the page carries a cursor.",
+        recorder.drain(),
+    )?;
+
+    println!("POST /graphql — one pull request opened");
+    let r = SubjectRef::pull_request(&RepoRef::new(OWNER, SEARCH_REPO), DETAIL_PR);
+    let detail = client.pull_requests().detail(&r).await?;
+    println!(
+        "  #{} `{}`: {} timeline events, {} check runs",
+        detail.pr.number,
+        detail.pr.title,
+        detail.timeline.len(),
+        detail.pr.checks.runs.len()
+    );
+    write(
+        "pull_request_detail",
+        "ShaxP/omaghy#34 opened: the row, body, branches, check contexts and \
+         the timeline of a merged PR. Note the MergedEvent and ClosedEvent one \
+         second apart — GitHub records both.",
+        recorder.drain(),
+    )?;
+
+    println!("POST /graphql — a pull request that does not exist");
+    let missing = SubjectRef::pull_request(&RepoRef::new(OWNER, SEARCH_REPO), 999_999);
+    let failed = client.pull_requests().detail(&missing).await;
+    println!("  -> {failed:?}");
+    write(
+        "pull_request_not_found",
+        "A number no PR has: HTTP 200, `repository.pullRequest` null, and a \
+         NOT_FOUND error naming it. The client answers StoreError::NotFound.",
         recorder.drain(),
     )
 }
