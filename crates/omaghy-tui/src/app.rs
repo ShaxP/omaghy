@@ -1147,6 +1147,80 @@ mod tests {
             assert!(out.contains("read-only"), "and it names why:\n{out}");
         }
 
+        /// End to end, against a real file on disk.
+        ///
+        /// Every other test here uses a writer that remembers calls, which
+        /// proves the panel *asks* for a save. It cannot prove anything gets
+        /// written, and "config.toml is not saved" was reported against a
+        /// build where all of those passed.
+        #[tokio::test]
+        async fn a_change_reaches_an_actual_file() {
+            #[derive(Debug)]
+            struct ToDisk(std::path::PathBuf);
+
+            impl ConfigWriter for ToDisk {
+                fn write(
+                    &self,
+                    section: &str,
+                    key: &str,
+                    value: Option<Scalar>,
+                ) -> Result<(), String> {
+                    let mut doc = std::fs::read_to_string(&self.0)
+                        .unwrap_or_default()
+                        .parse::<toml::Table>()
+                        .map_err(|e| e.to_string())?;
+                    let table = doc
+                        .entry(section.to_owned())
+                        .or_insert_with(|| toml::Value::Table(toml::Table::new()));
+                    if let Some(t) = table.as_table_mut() {
+                        match value {
+                            Some(Scalar::Str(v)) => {
+                                t.insert(key.to_owned(), toml::Value::String(v));
+                            }
+                            Some(Scalar::Int(v)) => {
+                                t.insert(key.to_owned(), toml::Value::Integer(v));
+                            }
+                            None => {
+                                t.remove(key);
+                            }
+                        }
+                    }
+                    std::fs::write(&self.0, doc.to_string()).map_err(|e| e.to_string())
+                }
+            }
+
+            let path = std::env::temp_dir().join(format!(
+                "omaghy-app-config-{}-{}.toml",
+                std::process::id(),
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_nanos()
+            ));
+            std::fs::write(&path, "").unwrap();
+
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_settings(Config::default())
+                .with_config_writer(Arc::new(ToDisk(path.clone())));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+
+            press(&mut app, ',').await;
+            for _ in 0..3 {
+                press(&mut app, 'j').await;
+            }
+            press(&mut app, 'l').await;
+
+            let written = std::fs::read_to_string(&path).unwrap();
+            std::fs::remove_file(&path).ok();
+            assert!(
+                written.contains("one-line"),
+                "the change never reached the file:\n{written:?}"
+            );
+        }
+
         /// Reported from a smoke test: the panel showed
         /// `applied, but not saved — /home/…/config.toml could ` and the rest
         /// of the sentence — including *why* — was off the edge.

@@ -72,19 +72,50 @@ impl ConfigWriter for FileWriter {
                     Scalar::Str(s) => toml_edit::value(s),
                     Scalar::Int(n) => toml_edit::value(n),
                 };
-                doc[section][key] = item;
+                // A missing section is created as a real table, so the file
+                // gets `[notifications]` the way `40-config.md` §2 writes it.
+                // Indexing straight into a missing key — `doc[s][k] = v` —
+                // produces an *inline* table instead: `notifications = { … }`,
+                // valid TOML that parses back fine, which is why the first
+                // test of this missed it entirely.
+                if !doc.as_table().contains_key(section) {
+                    doc.insert(section, toml_edit::Item::Table(toml_edit::Table::new()));
+                }
+                if let Some(t) = doc[section].as_table_mut() {
+                    t[key] = item;
+                } else if let Some(t) = doc[section].as_inline_table_mut() {
+                    // Someone wrote this section inline by hand. §6.3 says
+                    // their formatting survives, so it stays inline.
+                    if let Ok(value) = item.into_value() {
+                        t.insert(key, value);
+                    }
+                }
             }
             None => {
                 // Back to its default, so §6.3 wants the key gone rather than
                 // written out at the default — a file listing every value
                 // freezes today's defaults against tomorrow's.
-                if let Some(table) = doc.get_mut(section).and_then(|s| s.as_table_mut()) {
-                    table.remove(key);
-                    // An empty section left behind is noise the user did not
-                    // write, so it goes too — but only if it is empty.
-                    if table.is_empty() {
-                        doc.remove(section);
+                //
+                // Both table kinds, because `as_table_mut` is `None` for an
+                // inline one and this silently removed nothing at all.
+                let emptied = match doc.get_mut(section) {
+                    Some(item) => {
+                        if let Some(t) = item.as_table_mut() {
+                            t.remove(key);
+                            t.is_empty()
+                        } else if let Some(t) = item.as_inline_table_mut() {
+                            t.remove(key);
+                            t.is_empty()
+                        } else {
+                            false
+                        }
                     }
+                    None => false,
+                };
+                // An empty section left behind is noise the user did not
+                // write, so it goes too — but only if it is empty.
+                if emptied {
+                    doc.remove(section);
                 }
             }
         }
@@ -124,6 +155,111 @@ mod tests {
             warn.is_empty(),
             "an absent config is not a problem: {warn:?}"
         );
+    }
+
+    /// Reported: "config.toml is not saved when the config changes."
+    ///
+    /// It was, but into an *inline* table — `notifications = { rows = "…" }`
+    /// rather than `[notifications]`. Valid TOML that parses back fine, which
+    /// is exactly why the first version of the test below missed it: it
+    /// asserted the value survived a round trip and never looked at the shape.
+    ///
+    /// The shape then broke removal, which is the half a user notices: see
+    /// `a_key_can_be_removed_from_a_section_written_inline`.
+    #[test]
+    fn a_new_section_is_written_as_a_section_not_an_inline_table() {
+        let path = temp("shape.toml");
+        std::fs::write(&path, "").unwrap();
+
+        FileWriter::new(path.clone())
+            .write(
+                "notifications",
+                "rows",
+                Some(Scalar::Str("one-line".into())),
+            )
+            .unwrap();
+        let after = std::fs::read_to_string(&path).unwrap();
+
+        assert!(
+            after.contains("[notifications]"),
+            "`40-config.md` §2 writes sections with headers:\n{after}"
+        );
+        assert!(
+            !after.contains("notifications = {"),
+            "an inline table is not what anyone hand-edits:\n{after}"
+        );
+        std::fs::remove_file(&path).ok();
+    }
+
+    /// The bug the report was actually about.
+    ///
+    /// `as_table_mut()` is `None` for an inline table, so removing a key from
+    /// one silently did nothing — and returning a setting to its default is a
+    /// removal. The change applied on screen and the file never moved.
+    #[test]
+    fn a_key_can_be_removed_from_a_section_written_inline() {
+        let path = temp("inline.toml");
+        std::fs::write(
+            &path,
+            "notifications = { rows = \"one-line\", group = \"flat\" }\n",
+        )
+        .unwrap();
+
+        FileWriter::new(path.clone())
+            .write("notifications", "rows", None)
+            .unwrap();
+        let after = std::fs::read_to_string(&path).unwrap();
+
+        assert!(!after.contains("rows"), "the key should be gone:\n{after}");
+        assert!(after.contains("group"), "the others stay:\n{after}");
+        std::fs::remove_file(&path).ok();
+    }
+
+    /// And a section written inline by hand stays inline: §6.3 promises that
+    /// someone's formatting survives, and that includes formatting we would
+    /// not have chosen.
+    #[test]
+    fn a_hand_written_inline_section_is_not_reformatted() {
+        let path = temp("keep-inline.toml");
+        std::fs::write(&path, "notifications = { group = \"flat\" }\n").unwrap();
+
+        FileWriter::new(path.clone())
+            .write(
+                "notifications",
+                "rows",
+                Some(Scalar::Str("one-line".into())),
+            )
+            .unwrap();
+        let after = std::fs::read_to_string(&path).unwrap();
+
+        assert!(after.contains("notifications = {"), "{after}");
+        assert!(after.contains("one-line"), "{after}");
+        std::fs::remove_file(&path).ok();
+    }
+
+    /// The whole flow, as it is actually used: change a setting, then change
+    /// it back. The file must end where it started.
+    #[test]
+    fn changing_a_setting_and_changing_it_back_leaves_no_trace() {
+        let path = temp("roundtrip.toml");
+        std::fs::write(&path, "").unwrap();
+        let w = FileWriter::new(path.clone());
+
+        w.write(
+            "notifications",
+            "rows",
+            Some(Scalar::Str("one-line".into())),
+        )
+        .unwrap();
+        assert!(std::fs::read_to_string(&path).unwrap().contains("one-line"));
+
+        w.write("notifications", "rows", None).unwrap();
+        let after = std::fs::read_to_string(&path).unwrap();
+        assert!(
+            !after.contains("rows") && !after.contains("[notifications]"),
+            "back to where it started, section and all:\n{after}"
+        );
+        std::fs::remove_file(&path).ok();
     }
 
     #[test]
@@ -260,5 +396,46 @@ default-route = \"dashboard\"
             )
             .expect_err("/proc is not writable");
         assert!(!err.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod reported {
+    use super::*;
+
+    /// The file this was reported against, byte for byte.
+    #[test]
+    fn the_reported_file_can_be_edited_and_have_keys_removed() {
+        let path = {
+            let mut p = std::env::temp_dir();
+            p.push(format!("omaghy-reported-{}.toml", std::process::id()));
+            p
+        };
+        std::fs::write(
+            &path,
+            "general = { default-route = \"dashboard\" }\n\
+             notifications = { repo = \"elide-owner\", reason = \"none\" , triage = \"sink\" , rows = \"one-line\" , group = \"flat\" }\n",
+        )
+        .unwrap();
+        let w = FileWriter::new(path.clone());
+
+        // Change one, and put another back to its default.
+        w.write(
+            "notifications",
+            "rows",
+            Some(Scalar::Str("two-line".into())),
+        )
+        .unwrap();
+        w.write("notifications", "group", None).unwrap();
+
+        let after = std::fs::read_to_string(&path).unwrap();
+        let (cfg, warn) = parse(&after);
+        std::fs::remove_file(&path).ok();
+
+        assert!(warn.is_empty(), "{warn:?}\n{after}");
+        assert!(!after.contains("group"), "the removal landed:\n{after}");
+        assert!(after.contains("two-line"), "and the change did:\n{after}");
+        assert_eq!(cfg.inbox.reason.label(), "none", "the rest is untouched");
+        assert_eq!(cfg.default_route.as_deref(), Some("dashboard"));
     }
 }
