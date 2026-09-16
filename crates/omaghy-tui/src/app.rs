@@ -243,9 +243,7 @@ impl App {
                     }
                     None => self.status = Some("Nothing to refresh here".into()),
                 },
-                Global::OpenInBrowser => {
-                    self.status = Some("Opening in a browser arrives with the real surfaces".into())
-                }
+                Global::OpenInBrowser => self.open_in_browser(),
                 Global::Surface(i) => {
                     // Re-entering the surface you are already on would discard
                     // its cursor and filter for no reason.
@@ -312,6 +310,34 @@ impl App {
             self.dirty = true;
         }
         Ok(())
+    }
+
+    /// `o` — open the thing under the cursor on github.com.
+    ///
+    /// Three outcomes, and they are deliberately three: it opened, there was
+    /// nothing here to open, or the browser would not start. Collapsing the
+    /// last two loses the difference between "this row has no URL, and never
+    /// will" and "your `$BROWSER` is wrong".
+    fn open_in_browser(&mut self) {
+        self.dirty = true;
+        let Some(url) = self.top().browser_url() else {
+            self.status = Some("Nothing here to open on github.com".into());
+            return;
+        };
+        match self.ctx.opener.open(&url) {
+            // The URL goes in the message either way: on success it is what
+            // you just sent to a browser you may not have seen move, and on
+            // failure it is what you now have to open by hand.
+            Ok(()) => self.status = Some(format!("Opened {url}")),
+            Err(e) => self.status = Some(format!("Could not open {url} — {e}")),
+        }
+    }
+
+    /// Where `o` sends a URL. Defaults to opening nothing.
+    #[must_use]
+    pub fn with_opener(mut self, opener: Arc<dyn crate::open::Opener>) -> Self {
+        self.ctx.opener = opener;
+        self
     }
 
     // ---------------------------------------------------------- palette
@@ -774,6 +800,141 @@ mod tests {
         }
     }
     // ------------------------------------------------------- the settings panel
+
+    mod open_in_browser {
+        use super::super::*;
+        use crate::open::RecordOpened;
+        use crossterm::event::KeyEvent;
+        use omaghy_store::{FakeStore, Store};
+        use ratatui::{Terminal, backend::TestBackend};
+
+        async fn app_on(id: SurfaceId, opener: Arc<RecordOpened>) -> App {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW).with_opener(opener);
+            app.start(Route::surface(id)).await.expect("surface loads");
+            app
+        }
+
+        async fn press(app: &mut App, c: char) {
+            app.on_key(KeyEvent::from(KeyCode::Char(c))).await.unwrap();
+        }
+
+        fn draw(app: &mut App) -> String {
+            let mut t = Terminal::new(TestBackend::new(120, 30)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+
+        #[tokio::test]
+        async fn o_opens_the_focused_notification_on_github() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Notifications, opener.clone()).await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert_eq!(urls.len(), 1, "one keypress, one browser: {urls:?}");
+            assert!(
+                urls[0].starts_with("https://github.com/"),
+                "a github.com URL, not an api.github.com one: {}",
+                urls[0]
+            );
+        }
+
+        /// `o` follows the cursor — `00-overview.md` §1 says it opens *the
+        /// current thing*, so moving the cursor must change what it opens.
+        #[tokio::test]
+        async fn it_follows_the_cursor() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Notifications, opener.clone()).await;
+            press(app, 'o').await;
+            press(app, 'j').await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert_eq!(urls.len(), 2);
+            assert_ne!(urls[0], urls[1], "a different row is a different URL");
+        }
+
+        /// A section is a query, so the web has an exact counterpart.
+        #[tokio::test]
+        async fn on_the_dashboard_it_opens_the_section_as_a_search() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Dashboard, opener.clone()).await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert_eq!(urls.len(), 1);
+            assert!(
+                urls[0].starts_with("https://github.com/search?q="),
+                "{}",
+                urls[0]
+            );
+            assert!(
+                !urls[0].contains(' '),
+                "a raw space is not a URL: {}",
+                urls[0]
+            );
+            assert!(
+                urls[0].contains("review-requested"),
+                "the section's own query: {}",
+                urls[0]
+            );
+        }
+
+        /// A stub surface has nothing to open, and saying so is different from
+        /// failing to open something.
+        #[tokio::test]
+        async fn a_surface_with_nothing_to_open_says_so_and_opens_nothing() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Issues, opener.clone()).await;
+            press(app, 'o').await;
+
+            assert!(opener.urls().is_empty(), "nothing should have been opened");
+            let out = draw(app);
+            assert!(out.contains("Nothing here to open"), "{out}");
+        }
+
+        /// A browser that will not start is reported with the URL, because
+        /// that is what you now have to open by hand.
+        #[tokio::test]
+        async fn a_browser_that_will_not_start_names_the_url_and_the_reason() {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_opener(Arc::new(crate::open::NoOpener));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+            press(&mut app, 'o').await;
+
+            let out = draw(&mut app);
+            assert!(out.contains("Could not open"), "{out}");
+            assert!(
+                out.contains("https://github.com/"),
+                "the URL is in it:\n{out}"
+            );
+        }
+
+        /// The palette reaches it by name, like everything else (§5.1).
+        #[tokio::test]
+        async fn it_is_reachable_from_the_palette() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Notifications, opener.clone()).await;
+            press(app, ':').await;
+            for c in "app.open".chars() {
+                press(app, c).await;
+            }
+            app.on_key(KeyEvent::from(KeyCode::Enter)).await.unwrap();
+            assert_eq!(opener.urls().len(), 1, "{:?}", opener.urls());
+        }
+    }
 
     mod palette {
         use super::super::*;

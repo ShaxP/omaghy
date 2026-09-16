@@ -48,6 +48,25 @@ const BINDINGS: &[Binding] = &[
     Binding::new("dashboard.last", "G", "last").on(KeyCode::Char('G')),
 ];
 
+/// Percent-encode a search query for a URL.
+///
+/// Hand-written rather than a dependency: the alphabet a GitHub search uses is
+/// small, and `90-plan.md` §2.1 says an agent needing an unanticipated crate
+/// files a request rather than adding one. Unreserved characters per RFC 3986
+/// pass through; everything else, spaces and `:` included, is escaped.
+fn urlencode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 /// Cells before the title: cursor, space, section glyph, space. The cursor
 /// column never drops — a selection that is only reverse video is invisible
 /// on the terminals that do not do reverse video and in every screenshot
@@ -405,6 +424,19 @@ impl Surface for Dashboard {
     /// What `r` means while this surface is on top.
     fn reconfigure(&mut self, ctx: &Ctx) {
         self.cfg = (*ctx.dashboard).clone();
+    }
+
+    /// The focused section, as a GitHub search.
+    ///
+    /// A section *is* a query, so the web has an exact counterpart and no
+    /// fetch is needed to name it. `Enter` opens the search inside omaghy;
+    /// `o` opens the same search on github.com.
+    fn browser_url(&self) -> Option<String> {
+        let section = self.cfg.sections.get(self.cursor)?;
+        Some(format!(
+            "https://github.com/search?q={}&type=issues",
+            urlencode(&section.query)
+        ))
     }
 
     fn refresh_target(&self) -> Option<RefreshTarget> {

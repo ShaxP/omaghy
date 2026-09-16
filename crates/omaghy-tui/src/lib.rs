@@ -9,6 +9,7 @@
 pub mod app;
 pub mod config;
 pub mod keys;
+pub mod open;
 pub mod route;
 pub mod surface;
 pub mod surfaces;
