@@ -3,10 +3,11 @@
 What you need to build and run omaghy. Kept current as dependencies land —
 see [Keeping this current](#keeping-this-current).
 
-> **Status.** omaghy is pre-implementation. Requirements marked ✅ are verified
-> on a real machine; ⏳ are policy decisions taken in advance (§5) that no code
-> exercises yet. Nothing here is guesswork about what *might* be needed, but ⏳
-> items are unconfirmed until the dependency actually lands.
+> **Status.** Requirements marked ✅ are verified on a real machine by code
+> that exercises them; ⚪ are optional. Every ⏳ (a policy decision taken before
+> any code exercised it) has since been promoted — the last two, TLS and
+> SQLite in §5, by M1 running against the live API. Nothing here is guesswork
+> about what *might* be needed.
 
 ---
 
@@ -41,7 +42,7 @@ error rather than a silent update — this is what a packager should use.
 
 Disk: a full debug build of a workspace this size, with `reqwest` and
 `rusqlite` bundled, is realistically **1.5–3 GB** in `target/`. Budget for it.
-The dependency tree is 355 crates as of P0.2.
+The dependency tree is 358 crates as of M1.
 
 ---
 
@@ -52,7 +53,7 @@ The dependency tree is 355 crates as of P0.2.
 | ✅ **A truecolor terminal** | omaghy assumes 24-bit colour. It does **not** require any particular terminal — images degrade kitty-protocol → sixel → half-block → coloured initials. Omarchy's default is `foot` (sixel, no kitty protocol). |
 | ✅ **A GitHub token** | Resolved as `OMAGHY_TOKEN` → `GH_TOKEN` → `gh auth token`. The last needs [`gh`](https://cli.github.com) and `gh auth login`; there is no OAuth flow and no stored credential of our own. |
 | ✅ **Network access to `api.github.com`** | Reads are cache-first, so omaghy starts and renders offline — but it cannot fetch anything new. |
-| ✅ **`git`** | Clone and checkout handoff. |
+| ⚪ **`git`** | Clone and checkout handoff — the Repositories surface, M4. Nothing shells out to it yet. |
 | ⚪ **`xdg-open` or `$BROWSER`** | The `o` key opens the current thing on github.com. `$BROWSER` wins if set, `xdg-open` (from `xdg-utils`) otherwise. Without either, `o` names the URL it could not open and why, so it can still be copied. |
 | ⚪ **A Nerd Font** | Octicons — PR, merge, issue, check glyphs — come from the Nerd Font glyph range. Without one you get replacement boxes where icons should be. Omarchy ships JetBrainsMono Nerd Font. omaghy must stay legible without it, but it will look worse. |
 
