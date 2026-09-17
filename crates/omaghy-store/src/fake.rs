@@ -7,16 +7,20 @@
 //! (`spec/30-ui.md` §8) on demand: the error states are the ones that rot
 //! unnoticed, and they are most of what a user sees on a bad day.
 
+mod prs;
+
+pub use prs::pr_corpus;
+
 use crate::{
     event::{RefreshTarget, StoreEvent},
     fresh::Fresh,
-    query::{DashboardConfig, NotificationQuery, Page, ReadFilter},
+    query::{DashboardConfig, NotificationQuery, Page, PrQuery, ReadFilter},
     store::{Dashboard, DashboardSectionData, Store, Viewer},
 };
 use async_trait::async_trait;
 use omaghy_model::{
-    Enrichment, Notification, NotificationId, NotificationReason, RepoRef, Result, StoreError,
-    SubjectKind, SubjectRef,
+    Enrichment, Notification, NotificationId, NotificationReason, PrDetail, PrState, PullRequest,
+    RepoRef, Result, StoreError, SubjectKind, SubjectRef,
 };
 use std::sync::{Arc, Mutex};
 use time::{Duration, OffsetDateTime};
@@ -72,6 +76,7 @@ impl Behaviour {
 pub struct FakeStore {
     viewer: Viewer,
     rows: Mutex<Vec<Notification>>,
+    prs: Mutex<Vec<PrDetail>>,
     behaviour: Mutex<Behaviour>,
     events: broadcast::Sender<StoreEvent>,
     /// Targets passed to `refresh()`, so tests can assert scheduling.
@@ -87,20 +92,29 @@ impl std::fmt::Debug for FakeStore {
 }
 
 impl FakeStore {
-    /// The full 29-row corpus.
+    /// The full corpus: 29 notifications and 12 pull requests.
     pub fn with_corpus() -> Self {
-        Self::with_rows(corpus())
+        Self::with_rows(corpus()).with_pull_requests(pr_corpus())
     }
 
     pub fn with_rows(rows: Vec<Notification>) -> Self {
         let (events, _) = broadcast::channel(64);
         Self {
-            viewer: Viewer::new("ShaxP"),
+            viewer: Viewer::new(prs::ME),
             rows: Mutex::new(rows),
+            prs: Mutex::new(Vec::new()),
             behaviour: Mutex::new(Behaviour::default()),
             events,
             scheduled: Arc::new(Mutex::new(Vec::new())),
         }
+    }
+
+    /// Replace the pull requests. Built as details so one set serves both
+    /// reads; see [`pr_corpus`].
+    #[must_use]
+    pub fn with_pull_requests(self, prs: Vec<PrDetail>) -> Self {
+        *self.prs.lock().unwrap() = prs;
+        self
     }
 
     /// An empty store — the "all caught up" and cold-start cases.
@@ -137,8 +151,16 @@ impl FakeStore {
     }
 
     /// A plausible count for a dashboard query, without executing one.
-    fn count_for(rows: &[Notification], query: &str) -> u32 {
+    ///
+    /// A section about pull requests counts the pull requests, with the same
+    /// matcher the list read uses — so `Enter` on "Needs my review" opens a
+    /// list of exactly as many rows as the number it showed.
+    fn count_for(rows: &[Notification], prs: &[PrDetail], query: &str) -> u32 {
         use omaghy_model::NotificationReason as R;
+        if query.split_whitespace().any(|t| t == "is:pr") {
+            let q = PrQuery::search(query);
+            return prs.iter().filter(|d| Self::pr_matches(&d.pr, &q)).count() as u32;
+        }
         let n = |f: fn(&Notification) -> bool| rows.iter().filter(|r| f(r)).count() as u32;
         if query.contains("review-requested") {
             n(|r| r.reason == R::ReviewRequested)
@@ -151,6 +173,44 @@ impl FakeStore {
         } else {
             n(|r| r.unread)
         }
+    }
+
+    /// Enough of GitHub search syntax to make the corpus answer the queries
+    /// the dashboard and `pr:owner/name` actually send. Qualifiers it does
+    /// not know are ignored — which is, as it happens, also what GitHub does
+    /// with a qualifier *value* it does not know (`40-config.md` §2). Bare
+    /// words match the title.
+    fn pr_matches(pr: &PullRequest, q: &PrQuery) -> bool {
+        let me = prs::ME;
+        for term in q.effective().split_whitespace() {
+            let ok = match term.split_once(':') {
+                Some(("is", "pr")) => true,
+                Some(("is", "open")) => pr.state == PrState::Open,
+                Some(("is", "closed")) => pr.state != PrState::Open,
+                Some(("is", "merged")) => pr.state == PrState::Merged,
+                Some(("is", "unmerged")) => pr.state != PrState::Merged,
+                Some(("is", "draft")) | Some(("draft", "true")) => pr.is_draft,
+                Some(("draft", "false")) => !pr.is_draft,
+                Some(("repo", name)) => pr.repo.to_string().eq_ignore_ascii_case(name),
+                Some(("author", "@me")) => pr.author.as_ref().is_some_and(|a| a.login == me),
+                Some(("author", login)) => pr
+                    .author
+                    .as_ref()
+                    .is_some_and(|a| a.login.eq_ignore_ascii_case(login)),
+                Some(("review-requested", "@me")) => pr.review.i_am_requested,
+                Some(("reviewed-by", "@me")) => pr.review.my_review.is_some(),
+                Some(("label", name)) => pr
+                    .labels
+                    .iter()
+                    .any(|l| l.name.eq_ignore_ascii_case(name.trim_matches('"'))),
+                Some(_) => true,
+                None => pr.title.to_lowercase().contains(&term.to_lowercase()),
+            };
+            if !ok {
+                return false;
+            }
+        }
+        true
     }
 
     fn matches(n: &Notification, q: &NotificationQuery) -> bool {
@@ -199,6 +259,7 @@ impl Store for FakeStore {
         }
         let empty = self.behaviour.lock().unwrap().empty;
         let rows = self.rows.lock().unwrap();
+        let prs = self.prs.lock().unwrap();
         let sections = cfg
             .sections
             .iter()
@@ -217,7 +278,7 @@ impl Store for FakeStore {
                     // the default queries actually use, which is enough to make
                     // the fake's sections distinguishable and honest about
                     // being a fake.
-                    Self::count_for(&rows, &s.query)
+                    Self::count_for(&rows, &prs, &s.query)
                 },
             })
             .collect();
@@ -242,6 +303,41 @@ impl Store for FakeStore {
             items.truncate(limit);
         }
         Ok(self.wrap(Page::complete(items)))
+    }
+
+    async fn pull_requests(&self, q: &PrQuery) -> Result<Fresh<Page<PullRequest>>> {
+        if let Some(e) = self.behaviour.lock().unwrap().read_error.clone() {
+            return Err(e);
+        }
+        if self.behaviour.lock().unwrap().empty {
+            return Ok(self.wrap(Page::empty()));
+        }
+        let prs = self.prs.lock().unwrap();
+        let mut items: Vec<PullRequest> = prs
+            .iter()
+            .filter(|d| Self::pr_matches(&d.pr, q))
+            .map(|d| {
+                let mut pr = d.pr.clone();
+                // "Empty in list contexts; populated in detail" — the corpus
+                // is built as details, so the list read is where they go.
+                pr.checks.runs.clear();
+                pr
+            })
+            .collect();
+        items.sort_by_key(|p| std::cmp::Reverse(p.updated_at));
+        Ok(self.wrap(Page::complete(items)))
+    }
+
+    async fn pull_request(&self, r: &SubjectRef) -> Result<Fresh<Option<PrDetail>>> {
+        if let Some(e) = self.behaviour.lock().unwrap().read_error.clone() {
+            return Err(e);
+        }
+        if self.behaviour.lock().unwrap().empty {
+            return Ok(self.wrap(None));
+        }
+        let prs = self.prs.lock().unwrap();
+        let found = prs.iter().find(|d| d.pr.subject_ref() == *r).cloned();
+        Ok(self.wrap(found))
     }
 
     fn refresh(&self, target: RefreshTarget) {
@@ -794,6 +890,103 @@ mod tests {
                 .await
                 .is_err()
         );
+    }
+
+    #[tokio::test]
+    async fn pull_request_lists_answer_the_queries_the_app_sends() {
+        let s = FakeStore::with_corpus();
+
+        // The dashboard's first section, and the list it opens: one number.
+        let needs_me = PrQuery::search("is:open is:pr review-requested:@me");
+        let page = s.pull_requests(&needs_me).await.unwrap();
+        assert_eq!(page.value.len(), 3);
+        let dash = s.dashboard(&DashboardConfig::default()).await.unwrap();
+        assert_eq!(dash.value.sections[0].count, page.value.len() as u32);
+
+        let mine = s
+            .pull_requests(&PrQuery::search("is:open is:pr author:@me"))
+            .await
+            .unwrap();
+        assert!(
+            mine.value
+                .items
+                .iter()
+                .all(|p| p.author.as_ref().unwrap().login == "ShaxP")
+        );
+        assert_eq!(mine.value.len(), 2);
+
+        // `pr:ShaxP/shax`: the repository's open PRs, newest first.
+        let repo = s
+            .pull_requests(&PrQuery::repo(&RepoRef::new("ShaxP", "shax")))
+            .await
+            .unwrap();
+        assert_eq!(repo.value.len(), 2);
+        let times: Vec<_> = repo.value.items.iter().map(|p| p.updated_at).collect();
+        assert!(times.windows(2).all(|w| w[0] >= w[1]), "newest first");
+
+        // Rows carry no runs; the detail does.
+        assert!(repo.value.items.iter().all(|p| p.checks.runs.is_empty()));
+        let detail = s
+            .pull_request(&repo.value.items[0].subject_ref())
+            .await
+            .unwrap()
+            .value
+            .expect("a listed row opens");
+        assert!(!detail.pr.checks.runs.is_empty());
+    }
+
+    #[tokio::test]
+    async fn a_pull_request_notification_opens_a_detail() {
+        // The corpora share coordinates on purpose: Enter on a PR row of the
+        // inbox must land on a detail, not on "never fetched".
+        let s = FakeStore::with_corpus();
+        let inbox = s
+            .notifications(&NotificationQuery::default())
+            .await
+            .unwrap()
+            .value;
+        let first_pr = inbox
+            .items
+            .iter()
+            .find(|n| n.kind == SubjectKind::PullRequest)
+            .and_then(|n| n.subject.clone())
+            .expect("a PR notification with a coordinate");
+        let detail = s.pull_request(&first_pr).await.unwrap();
+        assert!(
+            detail.value.is_some(),
+            "{first_pr} should be in the PR corpus"
+        );
+
+        // And one that is not: `None`, not an error. Never fetched is not
+        // "does not exist".
+        let nowhere =
+            SubjectRef::parse_numbered("ShaxP/shax#9999", SubjectKind::PullRequest).unwrap();
+        assert!(s.pull_request(&nowhere).await.unwrap().value.is_none());
+    }
+
+    #[tokio::test]
+    async fn pull_request_reads_honour_the_behaviour_knobs() {
+        let s = FakeStore::with_corpus();
+        let q = PrQuery::search("is:pr");
+        let r = pr_corpus()[0].pr.subject_ref();
+
+        s.set_behaviour(Behaviour::offline_with_cache());
+        let stale = s.pull_requests(&q).await.unwrap();
+        assert!(stale.stale && !stale.value.is_empty());
+        assert!(s.pull_request(&r).await.unwrap().stale);
+
+        s.set_behaviour(Behaviour::offline_without_cache());
+        let cold = s.pull_requests(&q).await.unwrap();
+        assert!(cold.value.is_empty() && cold.fetched_at.is_none());
+        let cold = s.pull_request(&r).await.unwrap();
+        assert!(cold.value.is_none() && cold.fetched_at.is_none());
+
+        s.set_behaviour(Behaviour::failing(StoreError::RateLimited {
+            kind: omaghy_model::LimitKind::Primary,
+            at: FIXTURE_NOW,
+        }));
+        assert!(s.pull_requests(&q).await.is_err());
+        assert!(s.pull_request(&r).await.is_err());
     }
 
     #[test]

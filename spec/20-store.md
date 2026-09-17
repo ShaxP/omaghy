@@ -44,7 +44,7 @@ pub trait Store: Send + Sync + 'static {
     async fn dashboard(&self, cfg: &DashboardConfig) -> Result<Fresh<Dashboard>>;
     async fn notifications(&self, q: &NotificationQuery) -> Result<Fresh<Page<Notification>>>;
     async fn pull_requests(&self, q: &PrQuery) -> Result<Fresh<Page<PullRequest>>>;
-    async fn pull_request(&self, r: &SubjectRef) -> Result<Fresh<Option<PrDetail>>>;
+    async fn pull_request(&self, r: &SubjectRef) -> Result<Fresh<Option<PrDetail>>>;  // M2, built
     async fn issues(&self, q: &IssueQuery) -> Result<Fresh<Page<Issue>>>;
     // … one per surface
 
@@ -72,6 +72,51 @@ pub enum StoreEvent {
 `RateLimited` carries the kind because the UI says different things for the
 two: a primary limit is "back at 14:05", a secondary one is "slow down", and
 only the latter means an in-flight mutation must not be retried.
+
+### 1.1 Pull requests — the M2 contract
+
+```rust
+pub struct PrQuery { pub query: String }          // GitHub search syntax
+impl PrQuery {
+    pub fn search(q) -> Self;                     // any search string
+    pub fn repo(&RepoRef) -> Self;                // `repo:o/n is:open` — what `pr:o/n` opens
+    pub fn effective(&self) -> String;            // `is:pr` added if absent
+    pub fn cache_key(&self) -> String;            // `prs:{effective}`
+}
+pub enum RefreshTarget { …, PullRequests(PrQuery), PullRequest(SubjectRef), … }
+```
+
+**A list is a query, and a repository is one query among others.**
+`00-overview.md` §2 allowed "repo- or query-scoped"; building the dashboard
+settled it. The list a client is *for* is "everything awaiting my review
+across every repository", and only search syntax can say that, so `PrQuery`
+has one field and `repo()` is sugar. `is:pr` is added when absent, once, in
+`effective()`, so the key and the fetch cannot disagree and two spellings of
+one list are one fetch.
+
+**The refresh target carries the query, not its key.** It was
+`PullRequests { key: String }`; a fetcher handed a key would have had to
+parse the search string back out of it. `PrQuery` is `Eq + Hash`, so
+coalescing (§6) is unchanged.
+
+**`pull_request` answers `None` for "never held", not "does not exist".** A
+detail fetched and found missing arrives as `RefreshFailed` with
+`StoreError::NotFound`, through the same subscription as every other fetch
+outcome. Nothing in a read can distinguish the two, and a read that claimed to
+would be guessing.
+
+**The detail is keyed by coordinate, not node id.** `entities` holds the row
+under its node id (`kind = 'pr'`) and the detail under
+`pr-detail:owner/repo#61` (`kind = 'pr_detail'`, `omaghy_cache::pr_detail_key`).
+Two shapes, fetched on two clocks (§4), and a route knows the coordinate before
+any fetch has told it a node id. A list read skips a listed id whose body is
+missing — membership and bodies are stored apart (§3), so after a rebuild or a
+sweep by kind that is a normal state, and a row that cannot be shown is not
+shown.
+
+**`CheckRollup.runs` is empty in list rows and populated in the detail**, as
+`10-domain-model.md` §3.3 says. `FakeStore` builds its corpus as details and
+strips runs on the list read, so the fixture is held to it too.
 
 Events say *what changed*, never carry the data. Carrying payloads means two
 paths into the UI's state and they diverge; re-querying the cache is cheap and
@@ -386,11 +431,15 @@ Two implementations ship, and the TUI cannot tell them apart:
   Nothing in `omaghy-cache` knows how to open a socket, which is how "no test
   opens a socket" is enforced rather than merely intended. The fixtures that
   drive the fetch half are `omaghy-api`'s.
-- **`FakeStore`** — backed by `fake::corpus()`, with a `Behaviour` struct
-  toggling staleness, emptiness, cold cache, in-flight refresh, and read/write
-  failure injection. This is what surface agents build against, and what
-  snapshot tests run on so screens are deterministic. Its clock is fixed
-  (`FIXTURE_NOW`) so relative ages never make a snapshot fail on a Tuesday.
+- **`FakeStore`** — backed by `fake::corpus()` and `fake::pr_corpus()`, with
+  a `Behaviour` struct toggling staleness, emptiness, cold cache, in-flight
+  refresh, and read/write failure injection. This is what surface agents
+  build against, and what snapshot tests run on so screens are deterministic.
+  Its clock is fixed (`FIXTURE_NOW`) so relative ages never make a snapshot
+  fail on a Tuesday. The two corpora share coordinates — eight PR
+  notifications open onto a PR detail — so `Enter` in the fixture inbox lands
+  somewhere, and the dashboard's `is:pr` sections count the PR corpus, so a
+  section's number is the length of the list it opens.
 
 `FakeStore` must be able to produce every arm of §7 on demand. Error states are
 the ones that get skipped otherwise, and they are most of what a user sees on a

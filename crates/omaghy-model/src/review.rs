@@ -6,7 +6,7 @@ use crate::actor::Actor;
 use serde::{Deserialize, Serialize};
 
 /// Verified against the live schema.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ReviewState {
     Pending,
@@ -16,7 +16,7 @@ pub enum ReviewState {
     Dismissed,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 pub enum ReviewDecision {
     Approved,

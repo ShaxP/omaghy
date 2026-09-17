@@ -14,15 +14,17 @@
 //! in a draw path.
 
 use crate::{
-    cache::{Cache, NOTIFICATIONS_LIST, dashboard_list_key},
+    cache::{Cache, NOTIFICATIONS_LIST, dashboard_list_key, pr_detail_key},
     remote::{RecordIntent, Remote},
     ttl,
 };
 use async_trait::async_trait;
-use omaghy_model::{Notification, NotificationId, Result, StoreError};
+use omaghy_model::{
+    Notification, NotificationId, PrDetail, PullRequest, Result, StoreError, SubjectRef,
+};
 use omaghy_store::{
     Dashboard, DashboardSectionData, Fresh, RefreshTarget, Store, StoreEvent, Viewer,
-    query::{DashboardConfig, NotificationQuery, Page},
+    query::{DashboardConfig, NotificationQuery, Page, PrQuery},
 };
 use std::collections::HashSet;
 use std::path::Path;
@@ -290,6 +292,54 @@ impl Store for SqliteStore {
             meta.map(|m| m.fetched_at),
             ttl::notifications(poll),
             &RefreshTarget::Notifications,
+        ))
+    }
+
+    async fn pull_requests(&self, q: &PrQuery) -> Result<Fresh<Page<PullRequest>>> {
+        let key = q.cache_key();
+        let (items, meta) = {
+            let cache = self.lock();
+            let meta = cache.list_meta(&key)?;
+            let mut items = Vec::new();
+            for id in cache.list(&key)? {
+                // Membership and bodies are stored apart (§3), so a list can
+                // name a row whose body is gone — a rebuilt cache, or a sweep
+                // by kind. Skipping it is honest: the list is what was
+                // fetched, and a row that cannot be shown is not shown.
+                if let Some(stored) = cache.entity::<PullRequest>(&id)? {
+                    items.push(stored.value);
+                }
+            }
+            (items, meta)
+        };
+
+        let page = Page {
+            items,
+            cursor: meta.as_ref().and_then(|m| m.cursor.clone()),
+            total: meta.as_ref().and_then(|m| m.total),
+        };
+        Ok(self.wrap(
+            page,
+            meta.map(|m| m.fetched_at),
+            ttl::LIST,
+            &RefreshTarget::PullRequests(q.clone()),
+        ))
+    }
+
+    async fn pull_request(&self, r: &SubjectRef) -> Result<Fresh<Option<PrDetail>>> {
+        let stored = {
+            let cache = self.lock();
+            cache.entity::<PrDetail>(&pr_detail_key(r))?
+        };
+        let (value, fetched_at) = match stored {
+            Some(s) => (Some(s.value), Some(s.fetched_at)),
+            None => (None, None),
+        };
+        Ok(self.wrap(
+            value,
+            fetched_at,
+            ttl::DETAIL,
+            &RefreshTarget::PullRequest(r.clone()),
         ))
     }
 
