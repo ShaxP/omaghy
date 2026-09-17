@@ -153,8 +153,9 @@ This is slower than editing across boundaries and it is the point. A shared type
 mutating under four agents at once produces failures none of them can reproduce.
 
 **`omaghy-model` changes are the expensive case** — every crate depends on it,
-and `CONTRIBUTING.md`'s strict status check means every open PR must rebase.
-Batch them where possible.
+so `CONTRIBUTING.md` has such a PR merge alone, with nothing else in flight.
+(The strict up-to-date check this paragraph once cited was dropped; the
+merge-alone rule is what replaced it.) Batch them where possible.
 
 ---
 
