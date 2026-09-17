@@ -254,6 +254,19 @@ assignments, references) collapse into a single fold line — "*7 more events*",
 expandable. Timelines on active PRs are dominated by noise, and a client that
 renders all 78 kinds equally is unusable.
 
+> **Found in M2.1, against the live schema.** Every `*Event` member of the
+> union carries `actor` and `createdAt`, so an `Other` normally has both —
+> except four that are gated behind the `read:project` scope
+> (`AddedToProjectV2Event`, `RemovedFromProjectV2Event`,
+> `ProjectV2ItemStatusChangedEvent`, `ConvertedFromDraftEvent`): selecting
+> even `createdAt` on them fails the whole query. Those arrive as a bare
+> type name, no actor, and take the previous event's time. A merged PR
+> carries **both** a `Merged` and a `Closed` event, a second apart; the model
+> keeps both. And review threads are not children of their review on the
+> wire — they hang off the PR, each comment naming its review — so
+> `Review.threads` is assembled by id, and a thread whose review is not on
+> the page becomes a `ReviewThread` event at its first comment's time.
+
 ### 3.5 Notifications, and the enrichment problem
 
 The REST notifications payload — verified against the live API — carries only:

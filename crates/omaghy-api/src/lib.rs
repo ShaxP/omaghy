@@ -33,9 +33,11 @@
 //!
 //! On top of that transport sit the endpoint modules — one per surface, each
 //! owning the translation from GitHub's wire shapes into `omaghy-model`. So
-//! far that is [`notifications`]: the conditional poll, the `SubjectRef`
+//! far that is [`notifications`] — the conditional poll, the `SubjectRef`
 //! parsed from an API URL, one batched GraphQL query that enriches a whole
-//! page, and marking threads read.
+//! page, and marking threads read — [`search`], which counts the dashboard's
+//! sections, and [`pull_requests`], a page of rows for a search and one pull
+//! request opened with its checks, threads and timeline.
 //!
 //! # Getting a client
 //!
@@ -58,6 +60,7 @@ pub mod conditional;
 mod error;
 pub mod graphql;
 pub mod notifications;
+pub mod pull_requests;
 pub mod ratelimit;
 pub mod reqwest_transport;
 pub mod retry;
@@ -75,6 +78,7 @@ pub use graphql::{GraphQlError, GraphQlRequest, Partial, RateLimitField};
 pub use notifications::{
     ENRICHMENT_BATCH, MAX_PER_PAGE, NotificationFilter, NotificationPage, Notifications,
 };
+pub use pull_requests::{LIST_PAGE, PrPage, PullRequests, TIMELINE_CAP, TIMELINE_PAGE};
 pub use ratelimit::{Budget, Clock, Governor, POLL_INTERVAL_FLOOR, RateLimits, Resource};
 pub use reqwest_transport::{ReqwestTransport, install_crypto_provider};
 pub use retry::{RealSleeper, RetryPolicy, Sleeper};

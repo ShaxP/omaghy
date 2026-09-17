@@ -63,6 +63,11 @@ The dependency tree is 358 crates as of M1.
 `notifications` scope is not needed. `gh auth login` grants a superset of these
 by default.
 
+Deliberately **not** asked for: `read:project`. Four pull-request timeline
+event types (the ProjectV2 ones) can only be read with it; omaghy leaves them
+unselected and shows them as a bare event with no actor rather than demand a
+scope for a line nobody reads.
+
 ---
 
 ## 4. Development extras
