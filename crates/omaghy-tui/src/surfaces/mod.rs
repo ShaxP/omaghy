@@ -7,6 +7,7 @@
 
 pub mod dashboard;
 pub mod notifications;
+pub mod pull_requests;
 pub mod stub;
 
 use crate::{
@@ -29,8 +30,12 @@ pub fn build(route: &Route, ctx: &crate::surface::Ctx) -> Box<dyn Surface> {
         SurfaceId::Notifications => {
             Box::new(notifications::Notifications::new().with_variants(ctx.inbox))
         }
+        // The argument decides list or detail (`spec/30-ui.md` §3.2).
+        SurfaceId::PullRequests => {
+            Box::new(pull_requests::PullRequests::from_arg(route.arg.as_deref()))
+        }
         // Awaiting their waves; each is replaced in place.
-        SurfaceId::PullRequests | SurfaceId::Issues => stub::boxed(id, "M2"),
+        SurfaceId::Issues => stub::boxed(id, "M2"),
         SurfaceId::Actions | SurfaceId::Repositories | SurfaceId::Search => stub::boxed(id, "M4"),
     }
 }

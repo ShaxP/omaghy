@@ -6,8 +6,9 @@ Rust, [ratatui](https://ratatui.rs).
 > **Status: M1 is built and talks to GitHub.** The dashboard and the
 > notifications inbox work against the real API, cache-first, with a poll
 > loop, a settings panel, a command palette, and `o` to open things in a
-> browser. Pull requests and issues are next (M2); the rest is stubbed. The
-> milestones are in [`spec/00-overview.md`](spec/00-overview.md) §3.
+> browser. Pull requests can be listed and read (M2, in progress); issues are
+> next; the rest is stubbed. The milestones are in
+> [`spec/00-overview.md`](spec/00-overview.md) §3.
 
 ## What it is
 
@@ -19,7 +20,7 @@ finding things.
 |---|---|---|
 | Dashboard | My PRs, review requests, assigned issues, mentions — configurable sections | built |
 | Notifications | Inbox triage | built |
-| Pull requests | List → detail → review | M2 |
+| Pull requests | List → detail (conversation, checks); review actions are M3 | built, read-only |
 | Issues | List → detail → comment, label, close | M2 |
 | Actions | Runs, jobs, logs | M4 |
 | Repositories | Browse, README, clone handoff | M4 |

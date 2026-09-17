@@ -1,0 +1,263 @@
+---
+source: crates/omaghy-tui/src/surfaces/pull_requests.rs
+expression: out
+---
+── quickshell/quickshell#1 ──
+Add SocketServer reconnect backoff and idle timeout
+ open quickshell/quickshell#1 · outfoxxed · socket-reconnect → master · +312 −48 · 6 fil…
+needs your review · nixie commented
+ area:core   needs-review
+
+Checks  2 failed · 2 passed
+   build (x86_64)  success
+   build (aarch64)  success
+   test  failure
+  and 1 commit status not listed here
+
+Reconnects with exponential backoff (250ms → 30s) and drops a client after 60s idle.
+
+Fixes #1187.
+
+- [x] backoff
+- [x] idle timeout
+- [ ] docs
+
+ 4 more events — x to expand
+ nixie commented · 2026-09-10 08:00
+  A couple of questions inline; nothing blocking.
+  src/io/SocketServer.cpp:142
+    nixie: This retries forever. Should there be a ceiling on the backoff?
+    outfoxxed: Capped at 30s now — see the follow-up commit.
+
+ b2c3d4e Cap the backoff at 30s · outfoxxed
+ outfoxxed commented · 2026-09-10 10:56
+  CI is red on the new test — looking.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+── rust-lang/rust#6 ──
+Stabilize `let_chains` in the 2024 edition
+ open rust-lang/rust#6 · est-c · stabilize-let-chains → master · +2104 −611 · 58 files
+changes requested · compiler-reviewer requested changes · lang-reviewer approved
+ T-lang   T-compiler   S-waiting-on-review   relnotes   F-let_chains   disposition-merge
+
+Checks  1 pending · 2 passed
+   PR  success
+   mingw-check  success
+   x86_64-gnu-llvm-18  in progress
+
+Stabilization report for `let_chains` on edition 2024.
+
+# Summary
+
+This PR stabilizes let chains in `if` and `while` on edition 2024 only.
+
+# Tests
+
+- `tests/ui/rfcs/rfc-2497-if-let-chains/`
+
+cc @rust-lang/lang
+
+ rustbot commented · 2026-08-13 16:20
+  r? @compiler-reviewer
+
+  rustbot has assigned @compiler-reviewer.
+
+ 7 more events — x to expand
+ lang-reviewer commented · 2026-08-20 15:00
+  @rfcbot fcp merge
+
+ rfcbot commented · 2026-08-20 15:10
+  Team member @lang-reviewer has proposed to merge this. The next step is review by the
+  rest of the tagged team members.
+
+ rfcbot added the disposition-merge label · 2026-08-20 15:10
+ rfcbot proposed to merge · 2026-08-20 15:10
+ compiler-reviewer requested changes · 2026-08-27 13:40
+  The edition gate is checked in two places and they disagree. Please consolidate.
+
+ 4 more events — x to expand
+ lang-reviewer approved · 2026-09-06 23:40
+
+ someone-else referenced this from rust-lang/rust#7 · 2026-09-09 01:40
+ est-c commented · 2026-09-10 06:00
+  Rebased on master; the LLVM 18 job is still running.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+── rust-lang/rust#6 · expanded ──
+Stabilize `let_chains` in the 2024 edition
+ open rust-lang/rust#6 · est-c · stabilize-let-chains → master · +2104 −611 · 58 files
+changes requested · compiler-reviewer requested changes · lang-reviewer approved
+ T-lang   T-compiler   S-waiting-on-review   relnotes   F-let_chains   disposition-merge
+
+Checks  1 pending · 2 passed
+   PR  success
+   mingw-check  success
+   x86_64-gnu-llvm-18  in progress
+
+Stabilization report for `let_chains` on edition 2024.
+
+# Summary
+
+This PR stabilizes let chains in `if` and `while` on edition 2024 only.
+
+# Tests
+
+- `tests/ui/rfcs/rfc-2497-if-let-chains/`
+
+cc @rust-lang/lang
+
+ rustbot commented · 2026-08-13 16:20
+  r? @compiler-reviewer
+
+  rustbot has assigned @compiler-reviewer.
+
+ rustbot added the T-lang label · 2026-08-13 16:20
+ rustbot added the T-compiler label · 2026-08-13 16:20
+ rustbot added the S-waiting-on-review label · 2026-08-13 16:20
+ rustbot assigned compiler-reviewer · 2026-08-13 16:20
+ est-c added to project · 2026-08-13 16:30
+ est-c milestoned · 2026-08-13 16:30
+ est-c requested a review from lang-reviewer · 2026-08-13 16:40
+ lang-reviewer commented · 2026-08-20 15:00
+  @rfcbot fcp merge
+
+ rfcbot commented · 2026-08-20 15:10
+  Team member @lang-reviewer has proposed to merge this. The next step is review by the
+  rest of the tagged team members.
+
+ rfcbot added the disposition-merge label · 2026-08-20 15:10
+ rfcbot proposed to merge · 2026-08-20 15:10
+ compiler-reviewer requested changes · 2026-08-27 13:40
+  The edition gate is checked in two places and they disagree. Please consolidate.
+
+ d4e5f6a Consolidate the edition check · est-c
+ e5f6a1b Add a test for the 2021 edition · est-c
+ est-c force-pushed d4e5f6a → f6a1b2c · 2026-09-03 12:40
+ est-c renamed this from “Stabilize let_chains” to “Stabilize `let_chains` in the 2024 e…
+ lang-reviewer approved · 2026-09-06 23:40
+
+ someone-else referenced this from rust-lang/rust#7 · 2026-09-09 01:40
+ est-c commented · 2026-09-10 06:00
+  Rebased on master; the LLVM 18 job is still running.
+
+
+
+
+
+
+── basecamp/omarchy#2210 ──
+Add a Wayland-native screenshot annotator
+ closed basecamp/omarchy#2210 · ghost · screenshot-annotator → master · +220 −0 · 3 files
+no review
+
+Checks  1 failed
+   shellcheck  failure
+
+Annotate screenshots without leaving the compositor.
+
+ dhh commented · 2026-08-07 10:20
+  We're not adding a second screenshot tool. Thanks for the effort though.
+
+ dhh closed this · 2026-08-11 11:00
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+── some-very-long-organization-name/an-equally-long-repository-name#7 ──
+Short one
+ open some-very-long-organization-name/an-equally-long-repository-name#7 · colleague · t…
+you requested changes · ShaxP requested changes
+
+Checks  1 skipped
+   noop  skipped
+
+Typo.
+
+Nothing has happened here yet.
