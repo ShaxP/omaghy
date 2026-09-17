@@ -53,7 +53,7 @@ The dependency tree is 355 crates as of P0.2.
 | ✅ **A GitHub token** | Resolved as `OMAGHY_TOKEN` → `GH_TOKEN` → `gh auth token`. The last needs [`gh`](https://cli.github.com) and `gh auth login`; there is no OAuth flow and no stored credential of our own. |
 | ✅ **Network access to `api.github.com`** | Reads are cache-first, so omaghy starts and renders offline — but it cannot fetch anything new. |
 | ✅ **`git`** | Clone and checkout handoff. |
-| ⚪ **`xdg-open` or `$BROWSER`** | The `o` key opens the current thing on github.com. Without it, `o` is inert. |
+| ⚪ **`xdg-open` or `$BROWSER`** | The `o` key opens the current thing on github.com. `$BROWSER` wins if set, `xdg-open` (from `xdg-utils`) otherwise. Without either, `o` names the URL it could not open and why, so it can still be copied. |
 | ⚪ **A Nerd Font** | Octicons — PR, merge, issue, check glyphs — come from the Nerd Font glyph range. Without one you get replacement boxes where icons should be. Omarchy ships JetBrainsMono Nerd Font. omaghy must stay legible without it, but it will look worse. |
 
 ### Required token scopes

@@ -44,6 +44,9 @@ pub struct Ctx {
     ///
     /// [`Discard`]: crate::config::Discard
     pub config_writer: Arc<dyn crate::config::ConfigWriter>,
+    /// How `o` reaches a browser. A seam for the same reason
+    /// [`Self::config_writer`] is: spawning a process is I/O.
+    pub opener: Arc<dyn crate::open::Opener>,
 }
 
 impl std::fmt::Debug for Ctx {
@@ -68,6 +71,7 @@ impl Ctx {
             dashboard: Arc::new(omaghy_store::query::DashboardConfig::default()),
             icons,
             config_writer: Arc::new(crate::config::Discard),
+            opener: Arc::new(crate::open::NoOpener),
         }
     }
 
@@ -119,6 +123,16 @@ pub trait Surface: Send {
     ///
     /// Default: nothing to reconfigure.
     fn reconfigure(&mut self, _ctx: &Ctx) {}
+
+    /// What `o` opens here, if anything.
+    ///
+    /// The thing under the cursor, not the surface — `00-overview.md` §1 says
+    /// `o` opens *the current thing*. `None` means there is nothing
+    /// addressable, which is a real answer: a check-suite notification has no
+    /// URL and never will (`10-domain-model.md` §3.5).
+    fn browser_url(&self) -> Option<String> {
+        None
+    }
 
     /// Whether this event concerns this surface. Default: only global ones.
     fn cares_about(&self, ev: &StoreEvent) -> bool {

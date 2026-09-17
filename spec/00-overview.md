@@ -22,6 +22,10 @@ truecolor terminal and a `gh` token.
 - **Not a browser replacement.** Where GitHub's web UI is genuinely better —
   rich diffs on huge PRs, project boards, settings — omaghy's job is to get you
   there fast (`o` opens the current thing), not to reimplement it.
+  Built: each surface says what its cursor is on, and a seam outside
+  `omaghy-tui` spawns the browser — `$BROWSER`, else `xdg-open`. A surface with
+  nothing addressable says so, which is a different answer from a browser that
+  would not start, and both are different from silence.
 - **Not multi-forge.** GitHub only. No GitLab/Gitea abstraction layer; it would
   tax every type in §2 of `10-domain-model.md` for a user who does not exist.
 - **Not a notification daemon** in v1. `omaghy watch` is planned (§6) but is a

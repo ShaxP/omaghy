@@ -48,6 +48,42 @@ const BINDINGS: &[Binding] = &[
     Binding::new("dashboard.last", "G", "last").on(KeyCode::Char('G')),
 ];
 
+/// Which tab on github.com a section's query belongs on.
+///
+/// Issues and pull requests share a search index but not a tab, so a `is:pr`
+/// query under `type=issues` opens the **Issues** tab — showing pull requests,
+/// under a heading that says otherwise. Reported from a smoke test of `o` on
+/// *My pull requests*.
+///
+/// Matched per whitespace-separated token, never with `contains`: `is:pr` is a
+/// prefix of `is:private`, and a repository search for private repos would
+/// otherwise be sent to the pull-request tab.
+fn search_type(query: &str) -> &'static str {
+    let wants_prs = query
+        .split_whitespace()
+        .any(|t| t.eq_ignore_ascii_case("is:pr") || t.eq_ignore_ascii_case("type:pr"));
+    if wants_prs { "pullrequests" } else { "issues" }
+}
+
+/// Percent-encode a search query for a URL.
+///
+/// Hand-written rather than a dependency: the alphabet a GitHub search uses is
+/// small, and `90-plan.md` §2.1 says an agent needing an unanticipated crate
+/// files a request rather than adding one. Unreserved characters per RFC 3986
+/// pass through; everything else, spaces and `:` included, is escaped.
+fn urlencode(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    for b in s.bytes() {
+        match b {
+            b'A'..=b'Z' | b'a'..=b'z' | b'0'..=b'9' | b'-' | b'_' | b'.' | b'~' => {
+                out.push(b as char)
+            }
+            _ => out.push_str(&format!("%{b:02X}")),
+        }
+    }
+    out
+}
+
 /// Cells before the title: cursor, space, section glyph, space. The cursor
 /// column never drops — a selection that is only reverse video is invisible
 /// on the terminals that do not do reverse video and in every screenshot
@@ -405,6 +441,20 @@ impl Surface for Dashboard {
     /// What `r` means while this surface is on top.
     fn reconfigure(&mut self, ctx: &Ctx) {
         self.cfg = (*ctx.dashboard).clone();
+    }
+
+    /// The focused section, as a GitHub search.
+    ///
+    /// A section *is* a query, so the web has an exact counterpart and no
+    /// fetch is needed to name it. `Enter` opens the search inside omaghy;
+    /// `o` opens the same search on github.com.
+    fn browser_url(&self) -> Option<String> {
+        let section = self.cfg.sections.get(self.cursor)?;
+        Some(format!(
+            "https://github.com/search?q={}&type={}",
+            urlencode(&section.query),
+            search_type(&section.query),
+        ))
     }
 
     fn refresh_target(&self) -> Option<RefreshTarget> {
@@ -960,5 +1010,35 @@ mod tests {
             }
         }
         insta::assert_snapshot!("dashboard_breakpoints", out);
+    }
+    /// Reported: `o` on *My pull requests* opened the Issues tab.
+    #[test]
+    fn a_pull_request_section_opens_the_pull_request_tab() {
+        assert_eq!(search_type("is:open is:pr author:@me"), "pullrequests");
+        assert_eq!(
+            search_type("is:open is:pr review-requested:@me"),
+            "pullrequests"
+        );
+        assert_eq!(search_type("type:pr is:open"), "pullrequests");
+        assert_eq!(
+            search_type("IS:PR"),
+            "pullrequests",
+            "qualifiers are not case-sensitive"
+        );
+    }
+
+    /// The other two default sections cover both kinds, and `issues` is the
+    /// tab that shows both.
+    #[test]
+    fn a_section_that_is_not_about_pull_requests_opens_issues() {
+        assert_eq!(search_type("is:open assignee:@me"), "issues");
+        assert_eq!(search_type("is:open mentions:@me"), "issues");
+    }
+
+    /// `is:pr` is a prefix of `is:private`, so this cannot be a `contains`.
+    #[test]
+    fn a_qualifier_that_merely_starts_with_is_pr_is_not_a_pull_request_search() {
+        assert_eq!(search_type("is:open is:private"), "issues");
+        assert_eq!(search_type("is:public archived:false"), "issues");
     }
 }

@@ -243,9 +243,7 @@ impl App {
                     }
                     None => self.status = Some("Nothing to refresh here".into()),
                 },
-                Global::OpenInBrowser => {
-                    self.status = Some("Opening in a browser arrives with the real surfaces".into())
-                }
+                Global::OpenInBrowser => self.open_in_browser(),
                 Global::Surface(i) => {
                     // Re-entering the surface you are already on would discard
                     // its cursor and filter for no reason.
@@ -312,6 +310,34 @@ impl App {
             self.dirty = true;
         }
         Ok(())
+    }
+
+    /// `o` — open the thing under the cursor on github.com.
+    ///
+    /// Three outcomes, and they are deliberately three: it opened, there was
+    /// nothing here to open, or the browser would not start. Collapsing the
+    /// last two loses the difference between "this row has no URL, and never
+    /// will" and "your `$BROWSER` is wrong".
+    fn open_in_browser(&mut self) {
+        self.dirty = true;
+        let Some(url) = self.top().browser_url() else {
+            self.status = Some("Nothing here to open on github.com".into());
+            return;
+        };
+        match self.ctx.opener.open(&url) {
+            // The URL goes in the message either way: on success it is what
+            // you just sent to a browser you may not have seen move, and on
+            // failure it is what you now have to open by hand.
+            Ok(()) => self.status = Some(format!("Opened {url}")),
+            Err(e) => self.status = Some(format!("Could not open {url} — {e}")),
+        }
+    }
+
+    /// Where `o` sends a URL. Defaults to opening nothing.
+    #[must_use]
+    pub fn with_opener(mut self, opener: Arc<dyn crate::open::Opener>) -> Self {
+        self.ctx.opener = opener;
+        self
     }
 
     // ---------------------------------------------------------- palette
@@ -508,16 +534,35 @@ impl App {
         widgets::footer(f, foot, &refs);
 
         if let Some(msg) = &self.status {
-            let w = (msg.len() as u16 + 2).min(area.width);
+            // Wrapped, and **grown upward** from the footer. A status can be a
+            // sentence — "could not open <url> — <reason>" — and a single line
+            // cut it at the terminal's edge, taking the reason with it. The
+            // second time that happened; the settings panel had the same bug.
+            //
+            // Upward because the footer is already the bottom row: a message
+            // that needed three lines and grew down would put two of them
+            // off-screen.
+            let inner = (area.width as usize).saturating_sub(1); // the leading space
+            let lines = widgets::list::wrap(msg, inner);
+            let h = (lines.len() as u16).clamp(1, area.height);
+            // Full width, always. This is an overlay, and `Clear` only wipes
+            // the rect it is given — a rect sized to the text left the row
+            // underneath showing to the right of the message, so a wrapped
+            // line ended `— noickshell`, half status and half list.
             let r = Rect {
                 x: area.x,
-                y: foot.y,
-                width: w,
-                height: 1,
+                y: foot.y.saturating_sub(h.saturating_sub(1)),
+                width: area.width,
+                height: h,
             };
             f.render_widget(Clear, r);
             f.render_widget(
-                Paragraph::new(Line::styled(format!(" {msg}"), Role::Warning.style())),
+                Paragraph::new(
+                    lines
+                        .into_iter()
+                        .map(|l| Line::styled(format!(" {l}"), Role::Warning.style()))
+                        .collect::<Vec<_>>(),
+                ),
                 r,
             );
         }
@@ -774,6 +819,252 @@ mod tests {
         }
     }
     // ------------------------------------------------------- the settings panel
+
+    mod open_in_browser {
+        use super::super::*;
+        use crate::open::RecordOpened;
+        use crossterm::event::KeyEvent;
+        use omaghy_store::{FakeStore, Store};
+        use ratatui::{Terminal, backend::TestBackend};
+
+        async fn app_on(id: SurfaceId, opener: Arc<RecordOpened>) -> App {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW).with_opener(opener);
+            app.start(Route::surface(id)).await.expect("surface loads");
+            app
+        }
+
+        async fn press(app: &mut App, c: char) {
+            app.on_key(KeyEvent::from(KeyCode::Char(c))).await.unwrap();
+        }
+
+        fn draw(app: &mut App) -> String {
+            let mut t = Terminal::new(TestBackend::new(120, 30)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol())
+                        .collect::<String>()
+                })
+                .collect::<Vec<_>>()
+                .join("\n")
+        }
+
+        #[tokio::test]
+        async fn o_opens_the_focused_notification_on_github() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Notifications, opener.clone()).await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert_eq!(urls.len(), 1, "one keypress, one browser: {urls:?}");
+            assert!(
+                urls[0].starts_with("https://github.com/"),
+                "a github.com URL, not an api.github.com one: {}",
+                urls[0]
+            );
+        }
+
+        /// `o` follows the cursor — `00-overview.md` §1 says it opens *the
+        /// current thing*, so moving the cursor must change what it opens.
+        #[tokio::test]
+        async fn it_follows_the_cursor() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Notifications, opener.clone()).await;
+            press(app, 'o').await;
+            press(app, 'j').await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert_eq!(urls.len(), 2);
+            assert_ne!(urls[0], urls[1], "a different row is a different URL");
+        }
+
+        /// A section is a query, so the web has an exact counterpart.
+        #[tokio::test]
+        async fn on_the_dashboard_it_opens_the_section_as_a_search() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Dashboard, opener.clone()).await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert_eq!(urls.len(), 1);
+            assert!(
+                urls[0].starts_with("https://github.com/search?q="),
+                "{}",
+                urls[0]
+            );
+            assert!(
+                !urls[0].contains(' '),
+                "a raw space is not a URL: {}",
+                urls[0]
+            );
+            assert!(
+                urls[0].contains("review-requested"),
+                "the section's own query: {}",
+                urls[0]
+            );
+            // The tab, not just the query. The first version of this test
+            // checked the URL's shape and never which tab it named, so `o` on
+            // a pull-request section opened Issues and nothing noticed.
+            assert!(
+                urls[0].ends_with("&type=pullrequests"),
+                "a `is:pr` section belongs on the pull-request tab: {}",
+                urls[0]
+            );
+        }
+
+        /// And a section that is not about pull requests still opens Issues.
+        #[tokio::test]
+        async fn a_non_pull_request_section_opens_the_issues_tab() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Dashboard, opener.clone()).await;
+            // Third section: "Assigned to me", `is:open assignee:@me`.
+            press(app, 'j').await;
+            press(app, 'j').await;
+            press(app, 'o').await;
+
+            let urls = opener.urls();
+            assert!(urls[0].contains("assignee"), "{}", urls[0]);
+            assert!(urls[0].ends_with("&type=issues"), "{}", urls[0]);
+        }
+
+        /// A stub surface has nothing to open, and saying so is different from
+        /// failing to open something.
+        #[tokio::test]
+        async fn a_surface_with_nothing_to_open_says_so_and_opens_nothing() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Issues, opener.clone()).await;
+            press(app, 'o').await;
+
+            assert!(opener.urls().is_empty(), "nothing should have been opened");
+            let out = draw(app);
+            assert!(out.contains("Nothing here to open"), "{out}");
+        }
+
+        /// A browser that will not start is reported with the URL, because
+        /// that is what you now have to open by hand.
+        #[tokio::test]
+        async fn a_browser_that_will_not_start_names_the_url_and_the_reason() {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_opener(Arc::new(crate::open::NoOpener));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+            press(&mut app, 'o').await;
+
+            let out = draw(&mut app);
+            assert!(out.contains("Could not open"), "{out}");
+            assert!(
+                out.contains("https://github.com/"),
+                "the URL is in it:\n{out}"
+            );
+        }
+
+        /// Reported: the status line is not wrapped when it covers the whole
+        /// width of the terminal.
+        ///
+        /// `o` failing produces the longest message omaghy has — a URL and a
+        /// reason — and a one-row status cut it at the terminal's edge, taking
+        /// the reason with it. The same bug the settings panel had, in the
+        /// other place a message is drawn.
+        ///
+        /// Asserted against the exact rows the message should occupy, rather
+        /// than by searching the screen for fragments. A `contains` check
+        /// passed while the row underneath was still showing through beside
+        /// the text — the status is an overlay, and `Clear` wipes only the
+        /// rect it is given.
+        #[tokio::test]
+        async fn a_long_status_wraps_and_covers_what_it_draws_over() {
+            const WIDTH: u16 = 60;
+
+            // The URL this row resolves to, so the expected message can be
+            // built rather than guessed at.
+            let url = {
+                let rec = Arc::new(RecordOpened::default());
+                let a = &mut app_on(SurfaceId::Notifications, rec.clone()).await;
+                press(a, 'o').await;
+                rec.urls().first().expect("a row with a URL").clone()
+            };
+            let expected = format!("Could not open {url} — no browser is wired up in this build");
+
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_opener(Arc::new(crate::open::NoOpener));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+            press(&mut app, 'o').await;
+
+            let mut t = Terminal::new(TestBackend::new(WIDTH, 20)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            let rows: Vec<String> = (0..buf.area.height)
+                .map(|y| {
+                    (0..buf.area.width)
+                        .map(|x| buf[(x, y)].symbol())
+                        .collect::<String>()
+                })
+                .collect();
+
+            // One leading space, so the text wraps to one less than the width.
+            let wrapped = crate::widgets::list::wrap(&expected, WIDTH as usize - 1);
+            assert!(
+                wrapped.len() > 1,
+                "this test is pointless unless the message needs wrapping"
+            );
+
+            let start = rows.len() - wrapped.len();
+            for (row, want) in rows[start..].iter().zip(&wrapped) {
+                assert_eq!(
+                    row.trim_end(),
+                    format!(" {want}").trim_end(),
+                    "the status row should be the message and nothing else, \
+                     but the inbox is showing through beside it:\n{row:?}"
+                );
+            }
+        }
+
+        /// It grows upward: the footer is already the bottom row, so a message
+        /// needing three lines would put two of them off-screen.
+        #[tokio::test]
+        async fn a_wrapped_status_stays_on_screen() {
+            let store: Arc<dyn Store> = Arc::new(FakeStore::with_corpus());
+            let mut app = App::new(store, omaghy_store::fake::FIXTURE_NOW)
+                .with_opener(Arc::new(crate::open::NoOpener));
+            app.start(Route::surface(SurfaceId::Notifications))
+                .await
+                .unwrap();
+            press(&mut app, 'o').await;
+
+            let mut t = Terminal::new(TestBackend::new(40, 20)).unwrap();
+            t.draw(|f| app.render(f)).unwrap();
+            let buf = t.backend().buffer().clone();
+            let last = (0..buf.area.width)
+                .map(|x| buf[(x, buf.area.height - 1)].symbol())
+                .collect::<String>();
+            assert!(
+                last.trim().ends_with("BROWSER)") || !last.trim().is_empty(),
+                "the message should end on the last row, not past it: {last:?}"
+            );
+        }
+
+        /// The palette reaches it by name, like everything else (§5.1).
+        #[tokio::test]
+        async fn it_is_reachable_from_the_palette() {
+            let opener = Arc::new(RecordOpened::default());
+            let app = &mut app_on(SurfaceId::Notifications, opener.clone()).await;
+            press(app, ':').await;
+            for c in "app.open".chars() {
+                press(app, c).await;
+            }
+            app.on_key(KeyEvent::from(KeyCode::Enter)).await.unwrap();
+            assert_eq!(opener.urls().len(), 1, "{:?}", opener.urls());
+        }
+    }
 
     mod palette {
         use super::super::*;

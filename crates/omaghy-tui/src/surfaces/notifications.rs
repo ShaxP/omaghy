@@ -1284,6 +1284,25 @@ impl Surface for Notifications {
         self.variants = ctx.inbox;
     }
 
+    /// The focused row's subject on github.com.
+    ///
+    /// The enriched `html_url` when there is one — it is what GitHub itself
+    /// says, and it addresses the kinds a URL cannot be derived for, like a
+    /// release addressed by tag on the web and by id in the API. Falling back
+    /// to `SubjectRef::browser_url` is what lets an *unenriched* row still be
+    /// opened, which is most of the point: the list arrives before the detail
+    /// does.
+    fn browser_url(&self) -> Option<String> {
+        let i = self.focused()?;
+        let n = self.page.as_ref()?.value.items.get(i)?;
+        if let omaghy_model::Enrichment::Ready(d) = &n.detail
+            && !d.html_url.is_empty()
+        {
+            return Some(d.html_url.clone());
+        }
+        n.subject.as_ref()?.browser_url()
+    }
+
     fn refresh_target(&self) -> Option<RefreshTarget> {
         Some(RefreshTarget::Notifications)
     }

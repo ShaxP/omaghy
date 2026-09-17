@@ -2,6 +2,7 @@
 //!
 //! See `spec/00-overview.md`.
 
+mod browser;
 mod config_file;
 
 use anyhow::{Context, Result, bail};
@@ -125,7 +126,9 @@ async fn run(
 
     // The writer goes to the file that was actually read, so a change lands
     // where the value came from — including a `--config` path.
-    let mut app = App::new(store, now).with_settings(cfg.clone());
+    let mut app = App::new(store, now)
+        .with_settings(cfg.clone())
+        .with_opener(Arc::new(browser::SystemBrowser));
     if let Some(p) = config_path {
         app = app.with_config_writer(Arc::new(config_file::FileWriter::new(p)));
     }
